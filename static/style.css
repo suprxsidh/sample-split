@@ -1,0 +1,192 @@
+:root {
+    --success-color: #22c55e;
+    --success-bg: rgba(34, 197, 94, 0.1);
+    --danger-color: #ef4444;
+    --danger-bg: rgba(239, 68, 68, 0.1);
+}
+
+[data-bs-theme="dark"] {
+    --success-color: #4ade80;
+    --success-bg: rgba(74, 222, 128, 0.15);
+    --danger-color: #f87171;
+    --danger-bg: rgba(248, 113, 113, 0.15);
+    --bg-card: #1e293b;
+    --bg-body: #0f172a;
+    --text-body: #e2e8f0;
+    --border-color: #334155;
+}
+
+[data-bs-theme="light"] {
+    --bg-card: #ffffff;
+    --bg-body: #f8fafc;
+    --text-body: #1e293b;
+    --border-color: #e2e8f0;
+}
+
+body {
+    background-color: var(--bg-body);
+    color: var(--text-body);
+    min-height: 100vh;
+}
+
+.card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-top: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.auth-icon {
+    font-size: 3rem;
+    color: var(--success-color);
+}
+
+.navbar {
+    border-radius: 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.badge.bg-success {
+    background-color: var(--success-color) !important;
+}
+
+.badge.bg-danger {
+    background-color: var(--danger-color) !important;
+}
+
+.balance-positive {
+    color: var(--success-color);
+}
+
+.balance-positive i {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.balance-negative {
+    color: var(--danger-color);
+}
+
+.balance-negative i {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.balance-zero {
+    color: #6b7280;
+}
+
+.balance-zero i {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.group-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.group-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+.balance-display .badge {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+
+.empty-state {
+    padding: 4rem 2rem;
+}
+
+.empty-icon {
+    font-size: 5rem;
+    color: #cbd5e1;
+}
+
+.list-group-item {
+    background-color: transparent;
+    border-color: var(--border-color);
+}
+
+.bg-success-subtle {
+    background-color: var(--success-bg) !important;
+}
+
+.form-check-input:checked {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 0.25rem rgba(34, 197, 94, 0.25);
+}
+
+.btn-primary {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-primary:hover {
+    background-color: #16a34a;
+    border-color: #16a34a;
+}
+
+.btn-outline-primary {
+    color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.text-success {
+    color: var(--success-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
+}
+
+.btn-success {
+    background-color: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.btn-success:hover {
+    background-color: #16a34a;
+    border-color: #16a34a;
+}
+
+@media (max-width: 768px) {
+    .auth-card {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+    
+    .btn-group {
+        flex-direction: column;
+    }
+    
+    .btn-group .btn {
+        margin-bottom: 0.5rem;
+    }
+}

@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SampleSplit{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-people me-2"></i>My Groups</h1>
+    <div class="btn-group">
+        <a href="{{ url_for('create_group') }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Create Group
+        </a>
+        <a href="{{ url_for('join_group') }}" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Join Group
+        </a>
+        <button class="btn btn-outline-secondary" id="darkModeToggle" title="Toggle Dark Mode">
+            <i class="bi bi-moon-fill"></i>
+        </button>
+    </div>
+</div>
+
+{% if groups %}
+    <div class="row">
+        {% for group in groups %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card group-card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-collection me-2"></i>{{ group.name }}
+                        </h5>
+                        <p class="card-text text-muted">
+                            <small>{{ group.members|length }} members</small>
+                        </p>
+                        
+                        {% set balance = group_balances.get(group.id, 0) %}
+                        <div class="balance-display mb-3">
+                            {% if balance > 0 %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-arrow-up-circle me-1"></i>
+                                    Gets back ₹{{ "%.2f"|format(balance) }}
+                                </span>
+                            {% elif balance < 0 %}
+                                <span class="badge bg-danger">
+                                    <i class="bi bi-arrow-down-circle me-1"></i>
+                                    Owes ₹{{ "%.2f"|format(-balance) }}
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    All settled up
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ url_for('group', group_id=group.id) }}" class="btn btn-sm btn-outline-primary w-100">
+                            <i class="bi bi-arrow-right me-2"></i>View Group
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state text-center py-5">
+        <i class="bi bi-people-fill empty-icon"></i>
+        <h3>No groups yet</h3>
+        <p class="text-muted">Create a new group or join an existing one to start splitting expenses.</p>
+        <div class="btn-group mt-3">
+            <a href="{{ url_for('create_group') }}" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-circle me-2"></i>Create Group
+            </a>
+            <a href="{{ url_for('join_group') }}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-box-arrow-in-right me-2"></i>Join Group
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Join Group - SampleSplit{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-box-arrow-in-right me-2"></i>Join Existing Group</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="invite_code" class="form-label">Invite Code</label>
+                        <input type="text" class="form-control form-control-lg text-center" 
+                               id="invite_code" name="invite_code" 
+                               placeholder="000000" maxlength="6" pattern="[0-9]{6}"
+                               style="letter-spacing: 0.3em; font-weight: bold;" required autofocus>
+                        <small class="text-muted d-block mt-2">Enter the 6-digit code shared by your friend</small>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-people me-2"></i>Join Group
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('dashboard') }}" class="text-muted">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

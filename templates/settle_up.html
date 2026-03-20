@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Settle Up - SampleSplit{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-arrow-left-right me-2"></i>Record a Payment</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info mb-3" id="balanceHint">
+                    <small><i class="bi bi-info-circle me-2"></i>Select who you paid to see the suggested amount</small>
+                </div>
+                
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="payer_id" class="form-label">Who paid?</label>
+                        <select class="form-select" id="payer_id" name="payer_id" required>
+                            <option value="">Select...</option>
+                            {% for member in members %}
+                                <option value="{{ member.id }}" {% if member.id == current_user.id %}selected{% endif %}>
+                                    {{ member.username }}{% if member.id == current_user.id %} (Me){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="payee_id" class="form-label">Paid to?</label>
+                        <select class="form-select" id="payee_id" name="payee_id" required>
+                            <option value="">Select...</option>
+                            {% for member in members %}
+                                <option value="{{ member.id }}">
+                                    {{ member.username }}{% if member.id == current_user.id %} (Me){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="amount" class="form-label">Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="amount" name="amount" 
+                                   placeholder="0.00" step="0.01" min="0.01" required>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle me-2"></i>Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('group', group_id=group.id) }}" class="text-muted">
+                    <i class="bi bi-arrow-left me-2"></i>Back to {{ group.name }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const balances = {{ balances|tojson }};
+    const currentUserId = {{ current_user.id }};
+    const payerSelect = document.getElementById('payer_id');
+    const payeeSelect = document.getElementById('payee_id');
+    const amountInput = document.getElementById('amount');
+    const balanceHint = document.getElementById('balanceHint');
+    
+    function updateSuggestedAmount() {
+        const payerId = parseInt(payerSelect.value);
+        const payeeId = parseInt(payeeSelect.value);
+        
+        if (!payerId || !payeeId) {
+            balanceHint.innerHTML = '<small><i class="bi bi-info-circle me-2"></i>Select who you paid to see the suggested amount</small>';
+            balanceHint.className = 'alert alert-info mb-3';
+            return;
+        }
+        
+        if (payerId === payeeId) {
+            balanceHint.innerHTML = '<small><i class="bi bi-exclamation-triangle me-2"></i>Payer and payee cannot be the same</small>';
+            balanceHint.className = 'alert alert-warning mb-3';
+            amountInput.value = '';
+            return;
+        }
+        
+        const payerBalance = balances[payerId] || 0;
+        const payeeBalance = balances[payeeId] || 0;
+        
+        let suggestedAmount = 0;
+        let message = '';
+        
+        if (payerId === currentUserId) {
+            if (payeeBalance > 0) {
+                suggestedAmount = payeeBalance;
+                message = `<strong>${payeeSelect.options[payeeSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
+                balanceHint.className = 'alert alert-success mb-3';
+            } else if (payeeBalance < 0) {
+                suggestedAmount = Math.min(Math.abs(payeeBalance), Math.abs(payerBalance));
+                message = `You owe them ₹${Math.abs(payeeBalance).toFixed(2)} (max you can settle)`;
+                balanceHint.className = 'alert alert-warning mb-3';
+            } else {
+                message = 'All settled up with this person!';
+                balanceHint.className = 'alert alert-secondary mb-3';
+            }
+        } else if (payeeId === currentUserId) {
+            if (payerBalance > 0) {
+                suggestedAmount = payerBalance;
+                message = `<strong>${payerSelect.options[payerSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
+                balanceHint.className = 'alert alert-success mb-3';
+            } else if (payerBalance < 0) {
+                suggestedAmount = Math.abs(payerBalance);
+                message = `You owe them ₹${suggestedAmount.toFixed(2)}`;
+                balanceHint.className = 'alert alert-danger mb-3';
+            } else {
+                message = 'All settled up with this person!';
+                balanceHint.className = 'alert alert-secondary mb-3';
+            }
+        } else {
+            const fromPayerToPayee = payeeBalance - payerBalance;
+            if (fromPayerToPayee > 0) {
+                suggestedAmount = fromPayerToPayee;
+                message = `Suggested: ₹${suggestedAmount.toFixed(2)}`;
+                balanceHint.className = 'alert alert-info mb-3';
+            } else {
+                message = 'No debt between these users';
+                balanceHint.className = 'alert alert-secondary mb-3';
+            }
+        }
+        
+        balanceHint.innerHTML = `<small><i class="bi bi-lightbulb me-2"></i>${message}</small>`;
+        amountInput.value = suggestedAmount > 0 ? suggestedAmount.toFixed(2) : '';
+    }
+    
+    payerSelect.addEventListener('change', updateSuggestedAmount);
+    payeeSelect.addEventListener('change', updateSuggestedAmount);
+</script>
+{% endblock %}

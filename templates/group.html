@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block title %}{{ group.name }} - SampleSplit{% endblock %}
+
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1>
+                    <i class="bi bi-collection me-2"></i>
+                    <span id="groupNameDisplay">{{ group.name }}</span>
+                </h1>
+                <p class="text-muted mb-0">
+                    <small>Invite code: <strong class="text-primary" id="inviteCode">{{ group.invite_code }}</strong></small>
+                    <button class="btn btn-sm btn-outline-primary ms-2" onclick="copyToClipboard('{{ group.invite_code }}', this)">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                    {% if group.created_by_id == current_user.id %}
+                    <button class="btn btn-sm btn-outline-secondary ms-1" onclick="toggleEditGroup()">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    {% endif %}
+                </p>
+                <form id="editGroupForm" class="d-none mt-2" method="POST" action="{{ url_for('edit_group', group_id=group.id) }}">
+                    <div class="input-group input-group-sm" style="max-width: 300px;">
+                        <input type="text" class="form-control" name="name" value="{{ group.name }}" required>
+                        <button type="submit" class="btn btn-success"><i class="bi bi-check"></i></button>
+                        <button type="button" class="btn btn-secondary" onclick="toggleEditGroup()"><i class="bi bi-x"></i></button>
+                    </div>
+                </form>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-outline-secondary" id="darkModeToggle" title="Toggle Dark Mode">
+                    <i class="bi bi-moon-fill"></i>
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="bi bi-house me-2"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col">
+        <form method="GET" class="d-flex gap-2">
+            <input type="text" class="form-control" name="q" placeholder="Search expenses..." value="{{ search_query or '' }}">
+            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
+            {% if search_query %}
+            <a href="{{ url_for('group', group_id=group.id) }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-4 mb-4">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Your Balance</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if user_balance > 0 %}
+                    <div class="balance-positive">
+                        <i class="bi bi-arrow-up-circle-fill"></i>
+                        <h2 class="mb-0">₹{{ "%.2f"|format(user_balance) }}</h2>
+                        <p class="text-muted mb-0">gets back</p>
+                    </div>
+                {% elif user_balance < 0 %}
+                    <div class="balance-negative">
+                        <i class="bi bi-arrow-down-circle-fill"></i>
+                        <h2 class="mb-0">₹{{ "%.2f"|format(-user_balance) }}</h2>
+                        <p class="text-muted mb-0">owes</p>
+                    </div>
+                {% else %}
+                    <div class="balance-zero">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <h2 class="mb-0">₹0.00</h2>
+                        <p class="text-muted mb-0">all settled up!</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>Members</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for member in members %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="bi bi-person me-2"></i>{{ member.username }}
+                            {% if member.id == current_user.id %}
+                                <span class="badge bg-primary ms-1">You</span>
+                            {% endif %}
+                            {% if member.id == group.created_by_id %}
+                                <span class="badge bg-info ms-1">Owner</span>
+                            {% endif %}
+                        </span>
+                        {% set mb = member_balances.get(member.id, {}).get('balance', 0) %}
+                        {% if mb > 0 %}
+                            <span class="badge bg-success">+₹{{ "%.2f"|format(mb) }}</span>
+                        {% elif mb < 0 %}
+                            <span class="badge bg-danger">-₹{{ "%.2f"|format(-mb) }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary">₹0</span>
+                        {% endif %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if simplified %}
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-lightning me-2"></i>Simplify Debts</h5>
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#simplifyCollapse">
+                    <i class="bi bi-info-circle"></i>
+                </button>
+            </div>
+            <div class="collapse" id="simplifyCollapse">
+                <div class="card-body">
+                    <p class="text-muted small">The minimum number of payments needed to settle all debts.</p>
+                </div>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for transfer in simplified %}
+                    {% set from_user = members|selectattr('id', 'equalto', transfer.from)|first %}
+                    {% set to_user = members|selectattr('id', 'equalto', transfer.to)|first %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>
+                                <span class="text-danger">{{ from_user.username }}</span>
+                                <i class="bi bi-arrow-right mx-2"></i>
+                                <span class="text-success">{{ to_user.username }}</span>
+                            </span>
+                            <strong class="text-primary">₹{{ "%.2f"|format(transfer.amount) }}</strong>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        <div class="d-grid mt-4">
+            <form method="POST" action="{{ url_for('leave_group', group_id=group.id) }}" onsubmit="return confirm('Are you sure you want to leave this group?');">
+                <button type="submit" class="btn btn-outline-danger w-100">
+                    <i class="bi bi-box-arrow-left me-2"></i>Leave Group
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="btn-group w-100">
+                    <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Add Expense
+                    </a>
+                    <a href="{{ url_for('settle_up', group_id=group.id) }}" class="btn btn-success">
+                        <i class="bi bi-arrow-left-right me-2"></i>Settle Up
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Recent Activity</h5>
+                <span class="badge bg-secondary">{{ transactions|length }}</span>
+            </div>
+            {% if transactions %}
+                <ul class="list-group list-group-flush">
+                    {% for transaction in transactions %}
+                        {% if transaction.type == 'expense' %}
+                            <li class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ transaction.data.payer.username }}</strong>
+                                        <span class="text-muted">paid</span>
+                                        <strong class="text-primary">₹{{ "%.2f"|format(transaction.data.amount) }}</strong>
+                                        {% if transaction.data.description %}
+                                            <br><small class="text-muted">{{ transaction.data.description }}</small>
+                                        {% endif %}
+                                        <br><small class="text-muted">
+                                            {{ transaction.data.expense_date.strftime('%b %d, %Y') if transaction.data.expense_date else transaction.data.created_at.strftime('%b %d, %Y') }}
+                                        </small>
+                                    </div>
+                                    <div class="d-flex flex-column align-items-end gap-1">
+                                        <span class="badge bg-secondary">Expense</span>
+                                        {% if transaction.data.payer_id == current_user.id %}
+                                        <form method="POST" action="{{ url_for('delete_expense', group_id=group.id, expense_id=transaction.data.id) }}" onsubmit="return confirm('Delete this expense?');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </li>
+                        {% else %}
+                            <li class="list-group-item bg-success-subtle">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ transaction.data.payer.username }}</strong>
+                                        <span class="text-muted">paid</span>
+                                        <strong class="text-success">{{ transaction.data.payee.username }}</strong>
+                                        <strong class="text-success">₹{{ "%.2f"|format(transaction.data.amount) }}</strong>
+                                        <br><small class="text-muted">{{ transaction.data.created_at.strftime('%b %d, %Y') }}</small>
+                                    </div>
+                                    <span class="badge bg-success">Settlement</span>
+                                </div>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="card-body text-center py-5">
+                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-2">No activity yet. Add your first expense!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleEditGroup() {
+    const form = document.getElementById('editGroupForm');
+    const display = document.getElementById('groupNameDisplay');
+    form.classList.toggle('d-none');
+    if (!form.classList.contains('d-none')) {
+        form.querySelector('input').focus();
+    }
+}
+</script>
+{% endblock %}

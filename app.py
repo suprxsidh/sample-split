@@ -1328,8 +1328,7 @@ def seed_database():
     db.session.flush()
 
     exp1 = Expense(
-        group_id=group1.id, payer_id=alice.id, description="Dinner at restaurant",
-        amount=600, category_id=cat1_food.id
+        group_id=group1.id, payer_id=alice.id, description="Dinner at restaurant", amount=600, category_id=cat1_food.id
     )
     db.session.add(exp1)
     db.session.flush()
@@ -1338,8 +1337,7 @@ def seed_database():
     db.session.add(ExpenseSplit(expense_id=exp1.id, user_id=charlie.id, amount_owed=200))
 
     exp2 = Expense(
-        group_id=group1.id, payer_id=bob.id, description="Taxi to airport",
-        amount=300, category_id=cat1_transport.id
+        group_id=group1.id, payer_id=bob.id, description="Taxi to airport", amount=300, category_id=cat1_transport.id
     )
     db.session.add(exp2)
     db.session.flush()
@@ -1348,8 +1346,11 @@ def seed_database():
     db.session.add(ExpenseSplit(expense_id=exp2.id, user_id=charlie.id, amount_owed=100))
 
     exp3 = Expense(
-        group_id=group1.id, payer_id=charlie.id, description="Movie tickets",
-        amount=300, category_id=cat1_entertainment.id
+        group_id=group1.id,
+        payer_id=charlie.id,
+        description="Movie tickets",
+        amount=300,
+        category_id=cat1_entertainment.id,
     )
     db.session.add(exp3)
     db.session.flush()
@@ -1358,8 +1359,7 @@ def seed_database():
     db.session.add(ExpenseSplit(expense_id=exp3.id, user_id=charlie.id, amount_owed=0))
 
     exp4 = Expense(
-        group_id=group2.id, payer_id=bob.id, description="Groceries",
-        amount=400, category_id=cat2_groceries.id
+        group_id=group2.id, payer_id=bob.id, description="Groceries", amount=400, category_id=cat2_groceries.id
     )
     db.session.add(exp4)
     db.session.flush()
@@ -1368,8 +1368,7 @@ def seed_database():
     db.session.add(ExpenseSplit(expense_id=exp4.id, user_id=diana.id, amount_owed=133.34))
 
     exp5 = Expense(
-        group_id=group3.id, payer_id=alice.id, description="Pizza night",
-        amount=400, category_id=cat3_food.id
+        group_id=group3.id, payer_id=alice.id, description="Pizza night", amount=400, category_id=cat3_food.id
     )
     db.session.add(exp5)
     db.session.flush()
@@ -1381,7 +1380,9 @@ def seed_database():
     db.session.commit()
     click.echo("Seed data created successfully.")
     click.echo("  Users: alice, bob, charlie, diana (password: testpass123)")
-    click.echo(f"  Groups: {group1.name} (code: {group1.invite_code}), {group2.name} (code: {group2.invite_code}), {group3.name} (code: {group3.invite_code})")
+    click.echo(
+        f"  Groups: {group1.name} (code: {group1.invite_code}), {group2.name} (code: {group2.invite_code}), {group3.name} (code: {group3.invite_code})"
+    )
 
 
 @app.cli.command("seed")

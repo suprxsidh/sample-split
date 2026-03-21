@@ -128,11 +128,12 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ## Version 0.7 - Groups & Social
 ### Goal: Improve group management
 
-- [ ] Remove members (group admin only)
-- [ ] Group chat/comments on expenses
+- [x] Remove members (group admin only)
+- [x] Group chat/comments on expenses
 - [ ] Expense history/receipts upload
 - [ ] Recurring expenses
 
+**Status**: 50% Complete (2/4 features)
 **Priority**: Medium
 
 ---

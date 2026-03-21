@@ -405,16 +405,16 @@ class TestAdmin:
         assert b"Invalid" in response.data
 
     def test_admin_login_valid(self, test_client):
-        response = test_client.post("/admin/login", data={"username": "admin", "password": "password123"})
+        response = test_client.post("/admin/login", data={"username": "admin", "password": "password1234"})
         assert response.status_code == 302
 
     def test_admin_dashboard(self, test_client):
-        test_client.post("/admin/login", data={"username": "admin", "password": "password123"})
+        test_client.post("/admin/login", data={"username": "admin", "password": "password1234"})
         response = test_client.get("/admin")
         assert response.status_code == 200
 
     def test_admin_logout(self, test_client):
-        test_client.post("/admin/login", data={"username": "admin", "password": "password123"})
+        test_client.post("/admin/login", data={"username": "admin", "password": "password1234"})
         response = test_client.get("/admin/logout")
         assert response.status_code == 302
 
@@ -488,6 +488,65 @@ class TestSortAndFilter:
 
         response = logged_in_client.get(f"/group/{setup_data['group_id']}?category={cat_id}")
         assert response.status_code == 200
+
+
+class TestRemoveMember:
+    def test_remove_member(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="bob3", email="bob3@test.com")
+            bob.set_password("password")
+            db.session.add(bob)
+            db.session.commit()
+            bob_id = bob.id
+
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/remove/{bob_id}",
+            follow_redirects=True
+        )
+        assert b"removed" in response.data
+
+
+class TestComments:
+    def test_add_comment(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            expense = Expense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Test expense",
+                amount=50,
+            )
+            db.session.add(expense)
+            db.session.commit()
+            expense_id = expense.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense/{expense_id}/comment",
+            data={"content": "Great expense!"},
+            follow_redirects=True
+        )
+        assert b"added" in response.data
+
+    def test_empty_comment(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            expense = Expense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Test expense 2",
+                amount=50,
+            )
+            db.session.add(expense)
+            db.session.commit()
+            expense_id = expense.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense/{expense_id}/comment",
+            data={"content": ""},
+            follow_redirects=True
+        )
+        assert b"empty" in response.data
 
 
 if __name__ == "__main__":

@@ -113,14 +113,24 @@
                                 <span class="badge bg-info ms-1">Owner</span>
                             {% endif %}
                         </span>
-                        {% set mb = member_balances.get(member.id, {}).get('balance', 0) %}
-                        {% if mb > 0 %}
-                            <span class="badge bg-success">+₹{{ "%.2f"|format(mb) }}</span>
-                        {% elif mb < 0 %}
-                            <span class="badge bg-danger">-₹{{ "%.2f"|format(-mb) }}</span>
-                        {% else %}
-                            <span class="badge bg-secondary">₹0</span>
-                        {% endif %}
+                        <div class="d-flex align-items-center gap-2">
+                            {% set mb = member_balances.get(member.id, {}).get('balance', 0) %}
+                            {% if mb > 0 %}
+                                <span class="badge bg-success">+₹{{ "%.2f"|format(mb) }}</span>
+                            {% elif mb < 0 %}
+                                <span class="badge bg-danger">-₹{{ "%.2f"|format(-mb) }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">₹0</span>
+                            {% endif %}
+                            {% if current_user.id == group.created_by_id and member.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('remove_member', group_id=group.id, user_id=member.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove {{ member.username }} from this group?')">
+                                        <i class="bi bi-person-dash"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </div>
                     </li>
                 {% endfor %}
             </ul>
@@ -208,7 +218,7 @@
                         {% if transaction.type == 'expense' %}
                             <li class="list-group-item">
                                 <div class="d-flex justify-content-between align-items-start">
-                                    <div>
+                                    <div class="flex-grow-1">
                                         <strong>{{ transaction.data.payer.username }}</strong>
                                         <span class="text-muted">paid</span>
                                         <strong class="text-primary">₹{{ "%.2f"|format(transaction.data.amount) }}</strong>
@@ -224,6 +234,26 @@
                                         <br><small class="text-muted">
                                             {{ transaction.data.expense_date.strftime('%b %d, %Y') if transaction.data.expense_date else transaction.data.created_at.strftime('%b %d, %Y') }}
                                         </small>
+                                        
+                                        {% if transaction.data.comments %}
+                                            <div class="mt-2 ms-3 border-start border-2 ps-2">
+                                                {% for comment in transaction.data.comments %}
+                                                    <div class="small mb-1">
+                                                        <strong class="text-primary">{{ comment.user.username }}</strong>
+                                                        <span class="text-muted">{{ comment.content }}</span>
+                                                        <br><small class="text-muted">{{ comment.created_at.strftime('%b %d, %I:%M %p') }}</small>
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <form method="POST" action="{{ url_for('add_comment', group_id=group.id, expense_id=transaction.data.id) }}" class="mt-2">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" name="content" placeholder="Add a comment...">
+                                                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-chat"></i></button>
+                                            </div>
+                                        </form>
                                     </div>
                                     <div class="d-flex flex-column align-items-end gap-1">
                                         <span class="badge bg-secondary">Expense</span>

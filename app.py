@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from models import db, User, Group, GroupMember, Expense, ExpenseSplit, Settlement, PasswordReset, Category
+from models import db, User, Group, GroupMember, Expense, ExpenseSplit, Settlement, PasswordReset, Category, Comment
 from datetime import datetime
 import csv
 import io
@@ -404,6 +404,31 @@ def leave_group(group_id):
     return redirect(url_for("dashboard"))
 
 
+@app.route("/group/<int:group_id>/remove/<int:user_id>", methods=["POST"])
+@login_required
+def remove_member(group_id, user_id):
+    group_obj = Group.query.get_or_404(group_id)
+
+    if group_obj.created_by_id != current_user.id:
+        flash("Only the group creator can remove members.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    if user_id == current_user.id:
+        flash("You cannot remove yourself. Use 'Leave Group' instead.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    membership = GroupMember.query.filter_by(user_id=user_id, group_id=group_id).first()
+    if not membership:
+        flash("Member not found in this group.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    removed_user = User.query.get(user_id)
+    db.session.delete(membership)
+    db.session.commit()
+    flash(f'{removed_user.username} has been removed from the group.', "info")
+    return redirect(url_for("group", group_id=group_id))
+
+
 @app.route("/group/<int:group_id>/categories")
 @login_required
 def manage_categories(group_id):
@@ -603,6 +628,33 @@ def delete_expense(group_id, expense_id):
     db.session.delete(expense)
     db.session.commit()
     flash("Expense deleted.", "success")
+    return redirect(url_for("group", group_id=group_id))
+
+
+@app.route("/group/<int:group_id>/expense/<int:expense_id>/comment", methods=["POST"])
+@login_required
+def add_comment(group_id, expense_id):
+    group_obj = Group.query.get_or_404(group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    expense = Expense.query.get_or_404(expense_id)
+    if expense.group_id != group_id:
+        flash("Expense not found in this group.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    content = request.form.get("content", "").strip()
+    if not content:
+        flash("Comment cannot be empty.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    comment = Comment(expense_id=expense_id, user_id=current_user.id, content=content)
+    db.session.add(comment)
+    db.session.commit()
+    flash("Comment added.", "success")
     return redirect(url_for("group", group_id=group_id))
 
 

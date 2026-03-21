@@ -99,6 +99,7 @@ class Expense(db.Model):
     payer = db.relationship("User", back_populates="expenses_paid")
     splits = db.relationship("ExpenseSplit", back_populates="expense", cascade="all, delete-orphan")
     category = db.relationship("Category", back_populates="expenses")
+    comments = db.relationship("Comment", back_populates="expense", cascade="all, delete-orphan")
 
 
 class ExpenseSplit(db.Model):
@@ -141,3 +142,16 @@ class PasswordReset(db.Model):
 
     user = db.relationship("User", foreign_keys=[user_id])
     resolved_by = db.relationship("User", foreign_keys=[resolved_by_id])
+
+
+class Comment(db.Model):
+    __tablename__ = "comments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    expense_id = db.Column(db.Integer, db.ForeignKey("expenses.id"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+
+    expense = db.relationship("Expense", back_populates="comments")
+    user = db.relationship("User")

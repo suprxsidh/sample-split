@@ -1400,6 +1400,7 @@ def seed():
 
 with app.app_context():
     init_db()
+    seed_database()
 
 if __name__ == "__main__":
     app.run(debug=True, port=8080, host="0.0.0.0")

@@ -141,12 +141,13 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ## Version 0.8 - Export & Reports
 ### Goal: Data ownership and insights
 
-- [ ] Export to PDF
-- [ ] Monthly/weekly spending summaries
-- [ ] Per-person spending breakdown
-- [ ] Charts and visualizations
-- [ ] Budget limits per category
+- [x] Export to PDF
+- [x] Monthly/weekly spending summaries
+- [x] Per-person spending breakdown
+- [x] Charts and visualizations
+- [x] Budget limits per category
 
+**Status**: Complete ✅
 **Priority**: Low
 
 ---

@@ -861,6 +861,161 @@ def api_simplify(group_id):
     return jsonify(result)
 
 
+@app.route("/group/<int:group_id>/export")
+@login_required
+def export_group(group_id):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import inch
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    from io import BytesIO
+
+    group_obj = Group.query.get_or_404(group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    expenses = Expense.query.filter_by(group_id=group_id).order_by(Expense.expense_date.desc()).all()
+    members = [m.user for m in group_obj.members]
+    balances = calculate_balances(group_id)
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
+    elements = []
+    styles = getSampleStyleSheet()
+
+    elements.append(Paragraph(f"Expense Report: {group_obj.name}", styles["Title"]))
+    elements.append(Spacer(1, 0.2 * inch))
+    elements.append(Paragraph(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", styles["Normal"]))
+    elements.append(Spacer(1, 0.3 * inch))
+
+    elements.append(Paragraph("Expenses", styles["Heading2"]))
+    data = [["Date", "Description", "Payer", "Amount"]]
+    for exp in expenses:
+        data.append(
+            [
+                exp.expense_date.strftime("%Y-%m-%d") if exp.expense_date else "-",
+                exp.description[:30] + "..." if len(exp.description) > 30 else exp.description,
+                exp.payer.username,
+                f"₹{exp.amount:.2f}",
+            ]
+        )
+    data.append(["", "", "Total:", f"₹{sum(e.amount for e in expenses):.2f}"])
+
+    table = Table(data, colWidths=[1.2 * inch, 2.5 * inch, 1.2 * inch, 1 * inch])
+    table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.grey), ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke), ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("FONTSIZE", (0, 0), (-1, 0), 12), ("BOTTOMPADDING", (0, 0), (-1, 0), 12), ("BACKGROUND", (0, -1), (-1, -1), colors.beige), ("FONTNAME", (0, -1), (-1, -1), "Helvetica-Bold"), ("GRID", (0, 0), (-1, -2), 1, colors.black)]))
+    elements.append(table)
+    elements.append(Spacer(1, 0.3 * inch))
+
+    elements.append(Paragraph("Balances", styles["Heading2"]))
+    bal_data = [["Member", "Balance"]]
+    for member in members:
+        bal = balances.get(member.id, 0)
+        bal_data.append([member.username, f"₹{bal:.2f}"])
+
+    bal_table = Table(bal_data, colWidths=[3 * inch, 1.5 * inch])
+    bal_table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.grey), ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke), ("ALIGN", (0, 0), (-1, -1), "CENTER"), ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"), ("GRID", (0, 0), (-1, -1), 1, colors.black)]))
+    elements.append(bal_table)
+
+    doc.build(elements)
+    buffer.seek(0)
+
+    return buffer.read(), 200, {"Content-Type": "application/pdf", "Content-Disposition": f"attachment; filename={group_obj.name.replace(' ', '_')}_report.pdf"}
+
+
+@app.route("/group/<int:group_id>/summary")
+@login_required
+def group_summary(group_id):
+    group_obj = Group.query.get_or_404(group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    expenses = Expense.query.filter_by(group_id=group_id).all()
+    members = [m.user for m in group_obj.members]
+    categories = Category.query.filter_by(group_id=group_id).all()
+    balances = calculate_balances(group_id)
+
+    total_spent = sum(e.amount for e in expenses)
+
+    category_breakdown = {}
+    for cat in categories:
+        cat_total = sum(e.amount for e in expenses if e.category_id == cat.id)
+        if cat_total > 0:
+            category_breakdown[cat.id] = {"name": cat.name, "color": cat.color, "total": cat_total, "percentage": (cat_total / total_spent * 100) if total_spent > 0 else 0}
+
+    person_breakdown = []
+    for member in members:
+        paid = sum(e.amount for e in expenses if e.payer_id == member.id)
+        owed = sum(e.amount for e in expenses for split in e.splits if split.user_id == member.id)
+        person_breakdown.append({"user": member, "paid": paid, "owed": owed, "balance": balances.get(member.id, 0)})
+
+    monthly_data = {}
+    for exp in expenses:
+        month_key = exp.expense_date.strftime("%Y-%m") if exp.expense_date else exp.created_at.strftime("%Y-%m")
+        if month_key not in monthly_data:
+            monthly_data[month_key] = 0
+        monthly_data[month_key] += exp.amount
+
+    return render_template(
+        "summary.html",
+        group=group_obj,
+        total_spent=total_spent,
+        category_breakdown=category_breakdown,
+        person_breakdown=person_breakdown,
+        monthly_data=monthly_data,
+        expense_count=len(expenses),
+    )
+
+
+@app.route("/group/<int:group_id>/budget", methods=["GET", "POST"])
+@login_required
+def manage_budget(group_id):
+    group_obj = Group.query.get_or_404(group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "set_budget":
+            category_id = request.form.get("category_id", type=int)
+            budget_amount = request.form.get("budget", type=float)
+            if category_id and budget_amount:
+                cat = Category.query.get(category_id)
+                if cat:
+                    cat.budget_limit = budget_amount
+                    db.session.commit()
+                    flash(f"Budget set for {cat.name}!", "success")
+        elif action == "clear_budget":
+            category_id = request.form.get("category_id", type=int)
+            if category_id:
+                cat = Category.query.get(category_id)
+                if cat:
+                    cat.budget_limit = None
+                    db.session.commit()
+                    flash("Budget cleared.", "info")
+
+        return redirect(url_for("manage_budget", group_id=group_id))
+
+    categories = Category.query.filter_by(group_id=group_id).all()
+    expenses = Expense.query.filter_by(group_id=group_id).all()
+
+    category_status = []
+    for cat in categories:
+        spent = sum(e.amount for e in expenses if e.category_id == cat.id)
+        category_status.append({"category": cat, "spent": spent, "budget": cat.budget_limit, "remaining": (cat.budget_limit - spent) if cat.budget_limit else None, "over": (spent > cat.budget_limit) if cat.budget_limit else False})
+
+    return render_template("budget.html", group=group_obj, category_status=category_status)
+
+
 @app.route("/admin/login", methods=["GET", "POST"])
 @limiter.limit("3 per minute")
 def admin_login():

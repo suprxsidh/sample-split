@@ -192,6 +192,17 @@
                         <i class="bi bi-arrow-repeat me-2"></i>Recurring
                     </a>
                 </div>
+                <div class="btn-group w-100 mb-3">
+                    <a href="{{ url_for('group_summary', group_id=group.id) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pie-chart me-2"></i>Summary
+                    </a>
+                    <a href="{{ url_for('manage_budget', group_id=group.id) }}" class="btn btn-outline-warning">
+                        <i class="bi bi-graph-up me-2"></i>Budget
+                    </a>
+                    <a href="{{ url_for('export_group', group_id=group.id) }}" class="btn btn-outline-danger">
+                        <i class="bi bi-file-pdf me-2"></i>Export
+                    </a>
+                </div>
                 <div class="btn-group w-100">
                     <a href="{{ url_for('manage_categories', group_id=group.id) }}" class="btn btn-outline-secondary">
                         <i class="bi bi-tags me-2"></i>Categories

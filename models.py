@@ -75,6 +75,7 @@ class Category(db.Model):
     name = db.Column(db.String(50), nullable=False)
     icon = db.Column(db.String(20), default="tag")
     color = db.Column(db.String(7), default="#6b7280")
+    budget_limit = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
     group = db.relationship("Group", back_populates="categories")

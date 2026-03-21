@@ -633,12 +633,54 @@ class TestRecurringActions:
             db.session.commit()
             rec_id = recurring.id
 
+            response = logged_in_client.post(
+                f"/group/{setup_data['group_id']}/recurring",
+                data={"action": "create_expense", "recurring_id": str(rec_id)},
+                follow_redirects=True
+            )
+            assert b"created from recurring" in response.data
+
+
+class TestSummary:
+    def test_group_summary_page(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}/summary")
+        assert response.status_code == 200
+
+    def test_export_pdf(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            expense = Expense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Test",
+                amount=100,
+            )
+            db.session.add(expense)
+            db.session.commit()
+
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}/export")
+        assert response.status_code == 200
+        assert b"%PDF" in response.data
+
+
+class TestBudget:
+    def test_budget_page(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}/budget")
+        assert response.status_code == 200
+
+    def test_set_budget(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import Category
+            cat = Category(group_id=setup_data["group_id"], name="Food", color="#ff0000")
+            db.session.add(cat)
+            db.session.commit()
+            cat_id = cat.id
+
         response = logged_in_client.post(
-            f"/group/{setup_data['group_id']}/recurring",
-            data={"action": "create_expense", "recurring_id": str(rec_id)},
+            f"/group/{setup_data['group_id']}/budget",
+            data={"action": "set_budget", "category_id": str(cat_id), "budget": "500"},
             follow_redirects=True
         )
-        assert b"created from recurring" in response.data
+        assert response.status_code == 200
 
 
 if __name__ == "__main__":

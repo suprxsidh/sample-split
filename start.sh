@@ -1,14 +1,15 @@
 #!/bin/bash
 
 echo "=================================="
-echo "   FairShare - Start Options"
+echo "   SampleSplit - Start Options"
 echo "=================================="
 echo ""
 echo "1) Local only (http://localhost:8080)"
 echo "2) Local network (http://192.168.x.x:8080)"
 echo "3) Public URL via Cloudflare Tunnel"
+echo "4) Docker Compose (production with PostgreSQL)"
 echo ""
-read -p "Choose option (1/2/3): " choice
+read -p "Choose option (1/2/3/4): " choice
 
 case $choice in
     1)
@@ -38,6 +39,18 @@ case $choice in
                 echo "$line"
             fi
         done
+        ;;
+    4)
+        echo "Starting with Docker Compose..."
+        if [ ! -f .env ]; then
+            echo "No .env file found. Copying .env.example..."
+            cp .env.example .env
+            echo "Created .env from .env.example. Review and edit if needed."
+        fi
+        docker compose up -d
+        echo ""
+        echo "App running at http://localhost:8080"
+        echo "PostgreSQL DB running at localhost:5432"
         ;;
     *)
         echo "Invalid option"

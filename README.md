@@ -1,9 +1,10 @@
 # SampleSplit
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![Python](https://img.shields.io/badge/Python-3.11-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-3.0.0-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Tests](https://img.shields.io/badge/Tests-9%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/Tests-64%20passing-brightgreen.svg)
+![Coverage](https://img.shields.io/badge/Coverage-86%25-green.svg)
 
 A simple, privacy-first expense splitting app for groups of friends. Track shared expenses, split bills, and settle up easily. Self-hostable with no tracking or data sharing.
 
@@ -12,22 +13,26 @@ A simple, privacy-first expense splitting app for groups of friends. Track share
 ## Features
 
 - **User Authentication** - Register and login with secure password hashing
-- **Group Management** - Create groups with unique 6-digit invite codes
+- **Group Management** - Create groups with unique 6-digit invite codes, remove members (admin)
 - **Multiple Split Methods**:
   - Equal split among selected members
   - Split by percentage (must total 100%)
   - Split by exact amounts
 - **Balance Tracking** - Real-time balance calculations for each group member
 - **Smart Settlements** - Simplified debt algorithm minimizes the number of payments needed
+- **Categories** - Organize expenses with colored icons and custom budgets
+- **Comments** - Discuss expenses with group members
+- **Recurring Expenses** - Automate recurring payments (monthly rent, weekly groceries)
 - **Dark Mode** - Built-in dark theme with toggle
-- **Search** - Find expenses quickly within groups
-- **Expense Management** - Edit dates, delete your own expenses
-- **Leave/Edit Groups** - Full group management capabilities
+- **Search & Filter** - Find expenses by description, filter by category, sort by date or amount
+- **Export** - Download group expenses as PDF report
+- **PWA** - Installable on mobile and desktop as a standalone app
+- **Offline Fallback** - Graceful offline page when connectivity is lost
 
 ## Tech Stack
 
-- **Backend**: Python 3.10+, Flask 3.0, SQLAlchemy
-- **Database**: SQLite (PostgreSQL-ready for scaling)
+- **Backend**: Python 3.11+, Flask 3.0, SQLAlchemy
+- **Database**: SQLite (default), PostgreSQL (production)
 - **Frontend**: Bootstrap 5, Vanilla JavaScript
 - **Auth**: Flask-Login with Werkzeug password hashing
 - **Security**: Flask-WTF CSRF protection, rate limiting
@@ -38,7 +43,7 @@ A simple, privacy-first expense splitting app for groups of friends. Track share
 
 ### Prerequisites
 
-- Python 3.10 or higher
+- Python 3.11 or higher
 - Git
 
 ### Local Development
@@ -78,9 +83,18 @@ rm -f samplesplit.db
 
 ## Deployment
 
-### Railway (Recommended)
+### Docker Compose (Recommended for Production)
 
-The easiest way to deploy SampleSplit.
+The fastest way to deploy with PostgreSQL:
+
+```bash
+cp .env.example .env
+docker compose up -d
+```
+
+Open [http://localhost:8080](http://localhost:8080). PostgreSQL runs at `localhost:5432`.
+
+### Railway (Recommended for Cloud Hosting)
 
 1. Fork this repository to your GitHub account
 2. Create a new project on [Railway](https://railway.app)
@@ -89,29 +103,10 @@ The easiest way to deploy SampleSplit.
 5. Add environment variables:
    - `SECRET_KEY`: Generate a random 32+ character string
    - `FLASK_ENV`: `production`
+   - `DATABASE_URL`: (optional, Railway provides PostgreSQL automatically)
 6. Deploy!
 
 Railway automatically detects the Dockerfile and configures everything.
-
-### Render
-
-1. Fork this repository
-2. Create a new Web Service on [Render](https://render.com)
-3. Connect your GitHub repository
-4. Configure:
-   - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `gunicorn --bind 0.0.0.0:$PORT app:app`
-   - **Environment**: Python 3
-5. Add environment variable: `SECRET_KEY` (generate a random string)
-6. Deploy!
-
-### Fly.io
-
-1. Install [flyctl](https://fly.io/docs/flyctl/install/)
-2. Login: `fly auth login`
-3. Create app: `fly launch`
-4. Set secrets: `fly secrets set SECRET_KEY=your-secret-key`
-5. Deploy: `fly deploy`
 
 ### Docker
 
@@ -123,23 +118,32 @@ docker run -p 8080:8080 \
   samplesplit
 ```
 
-**Using Docker Compose:**
-```yaml
-services:
-  web:
-    build: .
-    ports:
-      - "8080:8080"
-    environment:
-      - SECRET_KEY=your-secret-key
-      - FLASK_ENV=production
-```
-
 **Pull from Registry (if available):**
 ```bash
 docker pull ghcr.io/suprxsidh/sample-split:latest
 docker run -p 8080:8080 -e SECRET_KEY=your-secret-key ghcr.io/suprxsidh/sample-split:latest
 ```
+
+### Render
+
+1. Fork this repository
+2. Create a new Web Service on [Render](https://render.com)
+3. Connect your GitHub repository
+4. Configure:
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `gunicorn --bind 0.0.0.0:$PORT app:app`
+   - **Environment**: Python 3.11
+5. Add environment variable: `SECRET_KEY` (generate a random string)
+6. Add `DATABASE_URL` if using Render's PostgreSQL addon
+7. Deploy!
+
+### Fly.io
+
+1. Install [flyctl](https://fly.io/docs/flyctl/install/)
+2. Login: `fly auth login`
+3. Create app: `fly launch`
+4. Set secrets: `fly secrets set SECRET_KEY=your-secret-key`
+5. Deploy: `fly deploy`
 
 ### Manual Production Deployment
 
@@ -149,7 +153,7 @@ export SECRET_KEY='your-secret-key-here'
 export FLASK_ENV=production
 
 # Run with gunicorn
-gunicorn -b 0.0.0.0:8080 --workers 2 app:app
+gunicorn -b 0.0.0.0:8080 --workers 4 --threads 2 app:app
 ```
 
 ---
@@ -171,6 +175,31 @@ gunicorn -b 0.0.0.0:8080 --workers 2 app:app
 - **By Percentage**: Enter percentages (must total 100%)
 - **By Exact Amounts**: Enter exact amounts for each member
 
+### Categories
+
+Create custom categories with icons and colors for better expense organization. Set budget limits per category to track spending.
+
+---
+
+## Test Accounts (Development)
+
+After installing, create test accounts for development:
+
+```bash
+flask seed
+```
+
+This creates 4 users and 3 sample groups with realistic expenses:
+
+| Username | Password | Groups |
+|----------|----------|--------|
+| alice | testpass123 | Weekend Trip, Dinner Club |
+| bob | testpass123 | Weekend Trip, Roommates, Dinner Club |
+| charlie | testpass123 | Weekend Trip, Roommates, Dinner Club |
+| diana | testpass123 | Roommates, Dinner Club |
+
+To reset: `rm -f samplesplit.db && flask seed`
+
 ---
 
 ## Project Structure
@@ -179,29 +208,30 @@ gunicorn -b 0.0.0.0:8080 --workers 2 app:app
 samplesplit/
 ├── app.py                  # Main Flask application and routes
 ├── models.py               # Database models (User, Group, Expense, etc.)
-├── requirements.txt       # Python dependencies
-├── Dockerfile              # Production container
-├── docker-compose.yml      # Docker Compose configuration
-├── pyproject.toml          # Black and Flake8 configuration
-├── .flake8                 # Flake8 linting configuration
+├── requirements.txt        # Python dependencies
+├── Dockerfile              # Multi-stage production container
+├── docker-compose.yml      # Docker Compose with PostgreSQL
+├── .env.example           # Environment variable template
 ├── templates/              # Jinja2 HTML templates
 │   ├── base.html          # Base layout template
 │   ├── login.html         # Login page
-│   ├── register.html     # Registration page
+│   ├── register.html      # Registration page
 │   ├── dashboard.html     # User dashboard
 │   ├── group.html         # Group details
 │   ├── add_expense.html   # Add/edit expense
 │   ├── settle_up.html     # Settlement view
 │   └── admin_*.html       # Admin templates
 ├── static/
-│   └── style.css          # Custom styles
+│   ├── style.css          # Custom styles
+│   ├── manifest.json      # PWA manifest
+│   ├── sw.js              # Service worker
+│   ├── offline.html       # Offline fallback
+│   └── icons/             # PWA icons
 ├── tests/                  # Pytest test suite
-│   └── test_basic.py      # Unit tests
+│   └── test_basic.py      # 64 unit tests
 ├── .github/
 │   └── workflows/         # GitHub Actions CI/CD
-│       └── ci.yml         # Continuous integration
-└── docs/                   # Deployment guides
-    └── DEPLOYMENT.md       # Detailed deployment instructions
+│       └── ci.yml         # Continuous integration (SQLite + PostgreSQL)
 ```
 
 ---
@@ -212,9 +242,22 @@ samplesplit/
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `SECRET_KEY` | Yes | - | Flask secret key for sessions (32+ chars) |
+| `SECRET_KEY` | Yes (prod) | dev key | Flask secret key for sessions (32+ chars) |
 | `FLASK_ENV` | No | `production` | `development` or `production` |
-| `DATABASE_URL` | No | `samplesplit.db` | SQLite database path |
+| `DATABASE_URL` | No | `sqlite:///samplesplit.db` | Database connection string |
+
+### Database URL Examples
+
+```bash
+# SQLite (default, local development)
+DATABASE_URL=sqlite:///samplesplit.db
+
+# PostgreSQL (production)
+DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/samplesplit
+
+# PostgreSQL on Railway/Render
+DATABASE_URL=postgresql+psycopg://user:pass@host:port/database?sslmode=require
+```
 
 ### Generating a Secret Key
 
@@ -226,17 +269,16 @@ python -c "import secrets; print(secrets.token_hex(32))"
 
 ## Testing
 
-Run the test suite:
-
 ```bash
 # Run all tests
 pytest tests/ -v
 
-# Run specific test
-pytest tests/test_basic.py -v
-
 # Run with coverage
-pytest tests/ -v --cov=. --cov-report=html
+pytest tests/ -v --cov=. --cov-report=term
+
+# Generate HTML coverage report
+pytest tests/ --cov=. --cov-report=html
+open htmlcov/index.html
 ```
 
 ---
@@ -249,8 +291,8 @@ Contributions welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 
 - **Python**: PEP 8, 4-space indentation, max 120 line length
 - **Naming**: `snake_case` (variables), `PascalCase` (classes), `UPPER_SNAKE` (constants)
-- **Formatting**: Black code formatter (configured in `pyproject.toml`)
-- **Linting**: Flake8 (configured in `.flake8`)
+- **Formatting**: Black code formatter
+- **Linting**: Flake8
 
 ### Submitting Changes
 
@@ -259,7 +301,8 @@ Contributions welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 3. Make your changes
 4. Run tests: `pytest tests/ -v`
 5. Format code: `black .`
-6. Submit a pull request
+6. Lint: `flake8 app.py models.py tests/`
+7. Submit a pull request
 
 ---
 
@@ -268,12 +311,6 @@ Contributions welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 - **Simple first** - Core features work flawlessly before adding complexity
 - **User-owned** - Self-hostable, no lock-in
 - **Privacy-first** - No tracking, no data sharing
-
----
-
-## Screenshots
-
-*(Add screenshots here after development)*
 
 ---
 

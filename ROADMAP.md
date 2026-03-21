@@ -152,28 +152,40 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 
 ---
 
-## Version 1.0 - Major Release
+## Version 1.0 - Production Release
 ### Goal: Production-ready open source
 
-- [ ] PostgreSQL support (for scaling)
-- [ ] Redis for caching
-- [ ] WebSocket for real-time updates
-- [ ] OAuth authentication (Google/GitHub)
-- [ ] PWA support
-- [ ] Comprehensive API documentation
+- [x] PostgreSQL support (for scaling)
+- [x] PWA support
+- [x] Docker Compose with PostgreSQL
+- [x] Multi-stage Dockerfile with health checks
+- [x] .env.example with production config
 
-**Priority**: Future
+**Status**: Complete ✅
+**Priority**: High
 
 ---
 
-## Version 1.1 - Mobile App
+## Version 1.1 - OAuth + Real-time
+### Goal: Modern auth and live updates
+
+- [ ] OAuth authentication (Google/GitHub)
+- [ ] Redis for caching
+- [ ] WebSocket for real-time updates
+- [ ] Comprehensive API documentation
+
+**Priority**: Medium
+
+---
+
+## Version 1.2 - Mobile App
 ### Goal: iOS/Android app via PWA + Capacitor
 
-**Phase 1 - PWA**
-- [ ] Add `manifest.json` (app name, icons, theme, standalone display)
-- [ ] Create service worker for offline caching
-- [ ] Add "Add to Home Screen" prompt
-- [ ] PWA meta tags in `base.html`
+**Phase 1 - PWA (Completed in v1.0)** ✅
+- [x] Add `manifest.json` (app name, icons, theme, standalone display)
+- [x] Create service worker for offline caching
+- [x] Add "Add to Home Screen" prompt
+- [x] PWA meta tags in `base.html`
 
 **Phase 2 - Capacitor + APK**
 - [ ] Wrap PWA with Capacitor for Android APK
@@ -184,14 +196,14 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 **Files to Create/Modify:**
 | File | Action |
 |------|--------|
-| `static/manifest.json` | New |
-| `static/sw.js` | New |
-| `static/icons/` | New |
-| `base.html` | Modify |
+| `static/manifest.json` | ✅ Done |
+| `static/sw.js` | ✅ Done |
+| `static/icons/` | ✅ Done |
+| `templates/base.html` | ✅ Done |
 | `.github/workflows/apk.yml` | New |
 | `ROADMAP.md` | Modify |
 
-**Priority**: High (after v0.4-v1.0)
+**Priority**: Medium
 **Timeline**: TBD
 
 ---
@@ -199,7 +211,7 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ## Future Ideas (Backlog)
 
 ### User Experience
-- [ ] Offline support
+- [x] Offline support (partial - PWA shell cached, offline fallback)
 - [ ] Push notifications
 - [ ] Keyboard shortcuts
 - [ ] Email/SMTP password reset (self-service via Resend/SendGrid)
@@ -231,10 +243,10 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 | Decision | Current | Options |
 |----------|---------|---------|
 | Frontend | Jinja2 | React, HTMX, Vue |
-| Mobile | Web-only | PWA + Capacitor (planned) |
-| Database | SQLite | PostgreSQL, Supabase |
+| Mobile | PWA-ready (v1.0) | PWA + Capacitor (v1.2) |
+| Database | SQLite (default), PostgreSQL (production) | PostgreSQL, Supabase |
 | Auth | Session-based | JWT, OAuth |
-| Hosting | Local | Railway, Vercel, Fly.io |
+| Hosting | Local, Docker | Railway, Vercel, Fly.io, Docker Compose |
 | Real-time | Polling | WebSocket |
 | Testing | pytest | None |
 
@@ -256,4 +268,4 @@ MIT License
 ---
 
 *Last updated: 2026-03-21*
-*Mobile App (v1.1) added: 2026-03-21*
+*v1.0 Production Release: 2026-03-21*

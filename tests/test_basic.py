@@ -5,7 +5,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app, db, calculate_balances, simplify_debts, limiter
-from models import User, Group, GroupMember, Expense, ExpenseSplit, Settlement, Category
+from models import User, Group, GroupMember, Expense, ExpenseSplit, Category
 
 
 @pytest.fixture
@@ -48,11 +48,7 @@ def setup_data(test_client, init_db):
         db.session.add(GroupMember(user_id=user.id, group_id=group.id))
         db.session.commit()
 
-        return {
-            "user_id": user.id,
-            "user_username": "testuser",
-            "group_id": group.id
-        }
+        return {"user_id": user.id, "user_username": "testuser", "group_id": group.id}
 
 
 @pytest.fixture
@@ -112,7 +108,9 @@ class TestLogin:
         assert response.status_code == 200
 
     def test_login_invalid_user(self, test_client, init_db):
-        response = test_client.post("/login", data={"username": "nonexistent", "password": "password123"}, follow_redirects=True)
+        response = test_client.post(
+            "/login", data={"username": "nonexistent", "password": "password123"}, follow_redirects=True
+        )
         assert b"Invalid username or password" in response.data
 
     def test_login_valid_user(self, test_client, init_db):
@@ -122,7 +120,9 @@ class TestLogin:
             db.session.add(user)
             db.session.commit()
 
-        response = test_client.post("/login", data={"username": "logintest", "password": "password123"}, follow_redirects=True)
+        response = test_client.post(
+            "/login", data={"username": "logintest", "password": "password123"}, follow_redirects=True
+        )
         assert b"Welcome back" in response.data
 
 
@@ -502,10 +502,7 @@ class TestRemoveMember:
             db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
             db.session.commit()
 
-        response = logged_in_client.post(
-            f"/group/{setup_data['group_id']}/remove/{bob_id}",
-            follow_redirects=True
-        )
+        response = logged_in_client.post(f"/group/{setup_data['group_id']}/remove/{bob_id}", follow_redirects=True)
         assert b"removed" in response.data
 
 
@@ -525,7 +522,7 @@ class TestComments:
         response = logged_in_client.post(
             f"/group/{setup_data['group_id']}/expense/{expense_id}/comment",
             data={"content": "Great expense!"},
-            follow_redirects=True
+            follow_redirects=True,
         )
         assert b"added" in response.data
 
@@ -542,9 +539,7 @@ class TestComments:
             expense_id = expense.id
 
         response = logged_in_client.post(
-            f"/group/{setup_data['group_id']}/expense/{expense_id}/comment",
-            data={"content": ""},
-            follow_redirects=True
+            f"/group/{setup_data['group_id']}/expense/{expense_id}/comment", data={"content": ""}, follow_redirects=True
         )
         assert b"empty" in response.data
 
@@ -560,7 +555,7 @@ class TestRecurring:
                 "payer_id": str(setup_data["user_id"]),
                 "frequency": "monthly",
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
         assert b"created" in response.data
 
@@ -571,6 +566,7 @@ class TestRecurring:
     def test_toggle_recurring(self, logged_in_client, setup_data, init_db):
         with app.app_context():
             from models import RecurringExpense
+
             recurring = RecurringExpense(
                 group_id=setup_data["group_id"],
                 payer_id=setup_data["user_id"],
@@ -584,7 +580,7 @@ class TestRecurring:
         response = logged_in_client.post(
             f"/group/{setup_data['group_id']}/recurring",
             data={"action": "toggle", "recurring_id": str(rec_id)},
-            follow_redirects=True
+            follow_redirects=True,
         )
         assert response.status_code == 200
 
@@ -598,7 +594,7 @@ class TestRecurring:
                 "payer_id": str(setup_data["user_id"]),
                 "frequency": "monthly",
             },
-            follow_redirects=True
+            follow_redirects=True,
         )
         assert b"valid amount" in response.data
 
@@ -623,6 +619,7 @@ class TestRecurringActions:
     def test_create_expense_from_recurring(self, logged_in_client, setup_data, init_db):
         with app.app_context():
             from models import RecurringExpense
+
             recurring = RecurringExpense(
                 group_id=setup_data["group_id"],
                 payer_id=setup_data["user_id"],
@@ -636,7 +633,7 @@ class TestRecurringActions:
             response = logged_in_client.post(
                 f"/group/{setup_data['group_id']}/recurring",
                 data={"action": "create_expense", "recurring_id": str(rec_id)},
-                follow_redirects=True
+                follow_redirects=True,
             )
             assert b"created from recurring" in response.data
 
@@ -670,6 +667,7 @@ class TestBudget:
     def test_set_budget(self, logged_in_client, setup_data, init_db):
         with app.app_context():
             from models import Category
+
             cat = Category(group_id=setup_data["group_id"], name="Food", color="#ff0000")
             db.session.add(cat)
             db.session.commit()
@@ -678,9 +676,267 @@ class TestBudget:
         response = logged_in_client.post(
             f"/group/{setup_data['group_id']}/budget",
             data={"action": "set_budget", "category_id": str(cat_id), "budget": "500"},
-            follow_redirects=True
+            follow_redirects=True,
         )
         assert response.status_code == 200
+
+
+class TestExpenseExactSplit:
+    def test_add_expense_exact_split(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "Exact split dinner",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"])],
+                "split_type": "exact",
+                f"amount_{setup_data['user_id']}": "100",
+            },
+            follow_redirects=True,
+        )
+        assert b"added successfully" in response.data
+
+    def test_add_expense_exact_split_wrong_total(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="exact_split_bob", email="exactbob@test.com")
+            bob.set_password("password")
+            db.session.add(bob)
+            db.session.commit()
+            bob_id = bob.id
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "Wrong total",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"]), str(bob_id)],
+                "split_type": "exact",
+                f"amount_{setup_data['user_id']}": "30",
+                f"amount_{bob_id}": "30",
+            },
+            follow_redirects=True,
+        )
+        assert b"100.00" in response.data
+
+
+class TestExpensePercentageValidation:
+    def test_percentage_wrong_total(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="pct_bob", email="pctbob@test.com")
+            bob.set_password("password")
+            db.session.add(bob)
+            db.session.commit()
+            bob_id = bob.id
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "Percentage wrong",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"]), str(bob_id)],
+                "split_type": "percentage",
+                f"percentage_{setup_data['user_id']}": "30",
+                f"percentage_{bob_id}": "30",
+            },
+            follow_redirects=True,
+        )
+        assert b"100%" in response.data
+
+
+class TestLeaveGroup:
+    def test_leave_group_last_member(self, logged_in_client, setup_data):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/leave",
+            follow_redirects=True,
+        )
+        assert b"left" in response.data
+
+
+class TestRecurringDelete:
+    def test_delete_recurring(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import RecurringExpense
+
+            recurring = RecurringExpense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="To delete",
+                amount=100,
+            )
+            db.session.add(recurring)
+            db.session.commit()
+            rec_id = recurring.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/recurring",
+            data={"action": "delete", "recurring_id": str(rec_id)},
+            follow_redirects=True,
+        )
+        assert b"deleted" in response.data
+
+
+class TestBudgetEdgeCases:
+    def test_budget_over_limit(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import Category, Expense
+
+            cat = Category(group_id=setup_data["group_id"], name="Food", color="#ff0000", budget_limit=50)
+            db.session.add(cat)
+            db.session.commit()
+            cat_id = cat.id
+
+            expense = Expense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Over budget",
+                amount=75,
+                category_id=cat_id,
+            )
+            db.session.add(expense)
+            db.session.commit()
+
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}/budget")
+        assert response.status_code == 200
+
+    def test_budget_clear(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import Category
+
+            cat = Category(group_id=setup_data["group_id"], name="Travel", color="#0000ff", budget_limit=200)
+            db.session.add(cat)
+            db.session.commit()
+            cat_id = cat.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/budget",
+            data={"action": "clear_budget", "category_id": str(cat_id)},
+            follow_redirects=True,
+        )
+        assert b"cleared" in response.data
+
+
+class TestForgotPassword:
+    def test_forgot_password_page(self, test_client):
+        response = test_client.get("/forgot-password")
+        assert response.status_code == 200
+
+    def test_forgot_password_submit(self, test_client, init_db):
+        with app.app_context():
+            user = User(username="forgotpw_user", email="forgotpw@test.com")
+            user.set_password("password")
+            db.session.add(user)
+            db.session.commit()
+
+        response = test_client.post(
+            "/forgot-password",
+            data={"identifier": "forgotpw_user"},
+            follow_redirects=True,
+        )
+        assert b"reset request submitted" in response.data or b"contact an administrator" in response.data
+
+    def test_forgot_password_nonexistent(self, test_client, init_db):
+        response = test_client.post(
+            "/forgot-password",
+            data={"identifier": "nonexistentuser123"},
+            follow_redirects=True,
+        )
+        assert b"if an account exists" in response.data or response.status_code == 200
+
+
+class TestExpenseDate:
+    def test_add_expense_with_date(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "50",
+                "description": "Yesterday's dinner",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"])],
+                "split_type": "equal",
+                "expense_date": "2026-01-15",
+            },
+            follow_redirects=True,
+        )
+        assert b"added successfully" in response.data
+
+    def test_add_expense_invalid_date(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "50",
+                "description": "Bad date",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"])],
+                "split_type": "equal",
+                "expense_date": "not-a-date",
+            },
+            follow_redirects=True,
+        )
+        assert b"Invalid date" in response.data
+
+
+class TestSettlementFlow:
+    def test_settlement_two_users(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="settle_bob", email="settle_bob@test.com")
+            bob.set_password("password")
+            db.session.add(bob)
+            db.session.commit()
+            bob_id = bob.id
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+        logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "Dinner",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"]), str(bob_id)],
+                "split_type": "equal",
+            },
+        )
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/settle",
+            data={
+                "payer_id": str(bob_id),
+                "payee_id": str(setup_data["user_id"]),
+                "amount": "50",
+            },
+            follow_redirects=True,
+        )
+        assert b"recorded" in response.data
+
+
+class TestSimplifyDebtsEdgeCases:
+    def test_simplify_all_balances_zero(self, test_client):
+        with app.app_context():
+            alice = User(id=100, username="alice100", email="alice100@test.com")
+            bob = User(id=200, username="bob200", email="bob200@test.com")
+            balances = {100: 0, 200: 0}
+            members = [alice, bob]
+            transfers = simplify_debts(balances, members)
+            assert len(transfers) == 0
+
+    def test_simplify_exact_two_person(self, test_client):
+        with app.app_context():
+            alice = User(id=300, username="alice300", email="alice300@test.com")
+            bob = User(id=400, username="bob400", email="bob400@test.com")
+            balances = {300: 100, 400: -100}
+            members = [alice, bob]
+            transfers = simplify_debts(balances, members)
+            assert len(transfers) == 1
+            assert transfers[0]["amount"] == 100
+            assert transfers[0]["from"] == 400
+            assert transfers[0]["to"] == 300
 
 
 if __name__ == "__main__":

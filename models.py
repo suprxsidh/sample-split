@@ -1,7 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 import random
 import string
 
@@ -92,7 +92,7 @@ class Expense(db.Model):
     payer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
     description = db.Column(db.String(200), default="")
     amount = db.Column(db.Float, nullable=False)
-    expense_date = db.Column(db.Date, default=datetime.utcnow().date)
+    expense_date = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
     tags = db.Column(db.String(200), default="")

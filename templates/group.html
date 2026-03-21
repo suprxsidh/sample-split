@@ -188,6 +188,11 @@
                     <a href="{{ url_for('settle_up', group_id=group.id) }}" class="btn btn-success">
                         <i class="bi bi-arrow-left-right me-2"></i>Settle Up
                     </a>
+                    <a href="{{ url_for('manage_recurring', group_id=group.id) }}" class="btn btn-outline-info">
+                        <i class="bi bi-arrow-repeat me-2"></i>Recurring
+                    </a>
+                </div>
+                <div class="btn-group w-100">
                     <a href="{{ url_for('manage_categories', group_id=group.id) }}" class="btn btn-outline-secondary">
                         <i class="bi bi-tags me-2"></i>Categories
                     </a>
@@ -245,6 +250,22 @@
                                                     </div>
                                                 {% endfor %}
                                             </div>
+                                        {% endif %}
+                                        
+                                        {% if transaction.data.receipt_url %}
+                                            <div class="mt-2">
+                                                <a href="{{ transaction.data.receipt_url }}" target="_blank" class="btn btn-sm btn-outline-info">
+                                                    <i class="bi bi-paperclip me-1"></i>View Receipt
+                                                </a>
+                                            </div>
+                                        {% elif transaction.data.payer_id == current_user.id %}
+                                            <form method="POST" action="{{ url_for('upload_receipt', group_id=group.id, expense_id=transaction.data.id) }}" enctype="multipart/form-data" class="mt-2">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="file" class="form-control" name="receipt" accept="image/*,.pdf">
+                                                    <button class="btn btn-outline-info" type="submit"><i class="bi bi-upload"></i></button>
+                                                </div>
+                                            </form>
                                         {% endif %}
                                         
                                         <form method="POST" action="{{ url_for('add_comment', group_id=group.id, expense_id=transaction.data.id) }}" class="mt-2">

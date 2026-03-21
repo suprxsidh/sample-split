@@ -43,6 +43,7 @@ class Group(db.Model):
     expenses = db.relationship("Expense", back_populates="group", cascade="all, delete-orphan")
     settlements = db.relationship("Settlement", back_populates="group", cascade="all, delete-orphan")
     categories = db.relationship("Category", back_populates="group", cascade="all, delete-orphan")
+    recurring_expenses = db.relationship("RecurringExpense", back_populates="group", cascade="all, delete-orphan")
 
     @staticmethod
     def generate_invite_code():
@@ -100,6 +101,26 @@ class Expense(db.Model):
     splits = db.relationship("ExpenseSplit", back_populates="expense", cascade="all, delete-orphan")
     category = db.relationship("Category", back_populates="expenses")
     comments = db.relationship("Comment", back_populates="expense", cascade="all, delete-orphan")
+    receipt_url = db.Column(db.String(500), nullable=True)
+
+
+class RecurringExpense(db.Model):
+    __tablename__ = "recurring_expenses"
+
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey("groups.id"), nullable=False)
+    payer_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    description = db.Column(db.String(200), default="")
+    amount = db.Column(db.Float, nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("categories.id"), nullable=True)
+    tags = db.Column(db.String(200), default="")
+    frequency = db.Column(db.String(20), default="monthly")
+    last_created = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
+    is_active = db.Column(db.Boolean, default=True)
+
+    group = db.relationship("Group")
+    payer = db.relationship("User")
 
 
 class ExpenseSplit(db.Model):

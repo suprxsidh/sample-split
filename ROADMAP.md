@@ -130,10 +130,10 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 
 - [x] Remove members (group admin only)
 - [x] Group chat/comments on expenses
-- [ ] Expense history/receipts upload
-- [ ] Recurring expenses
+- [x] Expense history/receipts upload
+- [x] Recurring expenses
 
-**Status**: 50% Complete (2/4 features)
+**Status**: Complete ✅
 **Priority**: Medium
 
 ---

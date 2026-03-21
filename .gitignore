@@ -47,3 +47,6 @@ build/
 
 # Session cookies (sensitive)
 *cookies*.txt
+
+# Uploaded files
+static/uploads/

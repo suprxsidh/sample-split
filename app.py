@@ -5,7 +5,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from models import db, User, Group, GroupMember, Expense, ExpenseSplit, Settlement, PasswordReset, Category, Comment
+from models import db, User, Group, GroupMember, Expense, ExpenseSplit, Settlement, PasswordReset, Category, Comment, RecurringExpense
 from datetime import datetime
 import csv
 import io
@@ -656,6 +656,141 @@ def add_comment(group_id, expense_id):
     db.session.commit()
     flash("Comment added.", "success")
     return redirect(url_for("group", group_id=group_id))
+
+
+@app.route("/group/<int:group_id>/expense/<int:expense_id>/receipt", methods=["POST"])
+@login_required
+def upload_receipt(group_id, expense_id):
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    expense = Expense.query.get_or_404(expense_id)
+    if expense.group_id != group_id:
+        flash("Expense not found in this group.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    if expense.payer_id != current_user.id:
+        flash("Only the expense creator can upload receipts.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    if "receipt" not in request.files:
+        flash("No file selected.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    file = request.files["receipt"]
+    if file.filename == "":
+        flash("No file selected.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    if file:
+        import os
+        import uuid
+        from werkzeug.utils import secure_filename
+
+        upload_dir = os.path.join(app.root_path, "static", "uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+
+        ext = os.path.splitext(secure_filename(file.filename))[1]
+        filename = f"{uuid.uuid4().hex}{ext}"
+        filepath = os.path.join(upload_dir, filename)
+        file.save(filepath)
+
+        expense.receipt_url = f"/static/uploads/{filename}"
+        db.session.commit()
+        flash("Receipt uploaded.", "success")
+
+    return redirect(url_for("group", group_id=group_id))
+
+
+@app.route("/group/<int:group_id>/recurring", methods=["GET", "POST"])
+@login_required
+def manage_recurring(group_id):
+    group_obj = Group.query.get_or_404(group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    members = [m.user for m in group_obj.members]
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "create":
+            amount = request.form.get("amount", type=float)
+            description = request.form.get("description", "").strip()
+            payer_id = request.form.get("payer_id", type=int)
+            frequency = request.form.get("frequency", "monthly")
+            category_id = request.form.get("category_id", type=int)
+            tags = request.form.get("tags", "").strip()
+
+            if not amount or amount <= 0:
+                flash("Please enter a valid amount.", "error")
+                return render_template("recurring.html", group=group_obj, members=members, recurring=group_obj.recurring_expenses)
+
+            recurring = RecurringExpense(
+                group_id=group_id,
+                payer_id=payer_id,
+                description=description or "Recurring expense",
+                amount=amount,
+                frequency=frequency,
+                category_id=category_id if category_id else None,
+                tags=tags,
+            )
+            db.session.add(recurring)
+            db.session.commit()
+            flash("Recurring expense created!", "success")
+
+        elif action == "toggle":
+            recurring_id = request.form.get("recurring_id", type=int)
+            recurring = RecurringExpense.query.get_or_404(recurring_id)
+            if recurring.group_id == group_id:
+                recurring.is_active = not recurring.is_active
+                db.session.commit()
+                flash(f"Recurring expense {'enabled' if recurring.is_active else 'disabled'}.", "info")
+
+        elif action == "delete":
+            recurring_id = request.form.get("recurring_id", type=int)
+            recurring = RecurringExpense.query.get_or_404(recurring_id)
+            if recurring.group_id == group_id:
+                db.session.delete(recurring)
+                db.session.commit()
+                flash("Recurring expense deleted.", "info")
+
+        elif action == "create_expense":
+            recurring_id = request.form.get("recurring_id", type=int)
+            recurring = RecurringExpense.query.get_or_404(recurring_id)
+            if recurring.group_id != group_id:
+                flash("Recurring expense not found.", "error")
+                return redirect(url_for("group", group_id=group_id))
+
+            expense = Expense(
+                group_id=group_id,
+                payer_id=recurring.payer_id,
+                description=recurring.description,
+                amount=recurring.amount,
+                category_id=recurring.category_id,
+                tags=recurring.tags,
+            )
+            db.session.add(expense)
+            db.session.flush()
+
+            for member in members:
+                split = ExpenseSplit(expense_id=expense.id, user_id=member.id, amount_owed=round(recurring.amount / len(members), 2))
+                db.session.add(split)
+
+            recurring.last_created = datetime.utcnow()
+            db.session.commit()
+            flash("Expense created from recurring!", "success")
+            return redirect(url_for("group", group_id=group_id))
+
+        return redirect(url_for("manage_recurring", group_id=group_id))
+
+    recurring = RecurringExpense.query.filter_by(group_id=group_id).order_by(RecurringExpense.created_at.desc()).all()
+    return render_template("recurring.html", group=group_obj, members=members, recurring=recurring, categories=group_obj.categories)
 
 
 @app.route("/group/<int:group_id>/settle", methods=["GET", "POST"])

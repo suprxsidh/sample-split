@@ -549,5 +549,97 @@ class TestComments:
         assert b"empty" in response.data
 
 
+class TestRecurring:
+    def test_create_recurring(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/recurring",
+            data={
+                "action": "create",
+                "description": "Monthly Rent",
+                "amount": "1000",
+                "payer_id": str(setup_data["user_id"]),
+                "frequency": "monthly",
+            },
+            follow_redirects=True
+        )
+        assert b"created" in response.data
+
+    def test_manage_recurring_page(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}/recurring")
+        assert response.status_code == 200
+
+    def test_toggle_recurring(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import RecurringExpense
+            recurring = RecurringExpense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Test",
+                amount=100,
+            )
+            db.session.add(recurring)
+            db.session.commit()
+            rec_id = recurring.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/recurring",
+            data={"action": "toggle", "recurring_id": str(rec_id)},
+            follow_redirects=True
+        )
+        assert response.status_code == 200
+
+    def test_invalid_amount_recurring(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/recurring",
+            data={
+                "action": "create",
+                "description": "Invalid",
+                "amount": "-10",
+                "payer_id": str(setup_data["user_id"]),
+                "frequency": "monthly",
+            },
+            follow_redirects=True
+        )
+        assert b"valid amount" in response.data
+
+
+class TestReceipt:
+    def test_receipt_upload_page(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            expense = Expense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Receipt test",
+                amount=50,
+            )
+            db.session.add(expense)
+            db.session.commit()
+
+        response = logged_in_client.get(f"/group/{setup_data['group_id']}")
+        assert b"receipt" in response.data.lower() or b"upload" in response.data.lower()
+
+
+class TestRecurringActions:
+    def test_create_expense_from_recurring(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            from models import RecurringExpense
+            recurring = RecurringExpense(
+                group_id=setup_data["group_id"],
+                payer_id=setup_data["user_id"],
+                description="Rent",
+                amount=500,
+            )
+            db.session.add(recurring)
+            db.session.commit()
+            rec_id = recurring.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/recurring",
+            data={"action": "create_expense", "recurring_id": str(rec_id)},
+            follow_redirects=True
+        )
+        assert b"created from recurring" in response.data
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

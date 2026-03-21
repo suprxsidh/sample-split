@@ -23,9 +23,16 @@ from datetime import datetime, timezone
 import csv
 import io
 
-app = Flask(__name__)
+instance_path = os.environ.get("INSTANCE_PATH", None)
+app = Flask(__name__, instance_path=instance_path)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-production")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("DATABASE_URL", "sqlite:///samplesplit.db")
+db_url = os.environ.get("DATABASE_URL", None)
+if db_url:
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url
+else:
+    if instance_path:
+        os.makedirs(instance_path, exist_ok=True)
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///samplesplit.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["WTF_CSRF_ENABLED"] = True
 app.config["TESTING"] = os.environ.get("TESTING", False)

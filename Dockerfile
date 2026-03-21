@@ -23,11 +23,13 @@ COPY --from=builder /root/.local /home/appuser/.local
 
 ENV PATH=/home/appuser/.local/bin:$PATH \
     PYTHONUNBUFFERED=1 \
-    FLASK_ENV=production
+    FLASK_ENV=production \
+    INSTANCE_PATH=/home/appuser/samplesplit/instance
 
 COPY --chown=appuser:appuser . .
 
-RUN mkdir -p /home/appuser/samplesplit/static/uploads && \
+RUN mkdir -p /home/appuser/samplesplit/instance \
+             /home/appuser/samplesplit/static/uploads && \
     chown -R appuser:appuser /home/appuser/samplesplit
 
 USER appuser

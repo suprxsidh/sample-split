@@ -14,7 +14,7 @@
                     <small><i class="bi bi-info-circle me-2"></i>Select who you paid to see the suggested amount</small>
                 </div>
                 
-                <form method="POST">
+                <form method="POST" id="settleForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label for="payer_id" class="form-label">Who paid?</label>
@@ -50,8 +50,10 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-success btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>Record Payment
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+                            <i class="bi bi-check-circle me-2" id="btnIcon"></i>
+                            <span id="btnText">Record Payment</span>
                         </button>
                     </div>
                 </form>
@@ -64,81 +66,96 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
+{% block scripts %}
+{{ super() }}
 <script>
-    const balances = {{ balances|tojson }};
-    const currentUserId = {{ current_user.id }};
-    const payerSelect = document.getElementById('payer_id');
-    const payeeSelect = document.getElementById('payee_id');
-    const amountInput = document.getElementById('amount');
-    const balanceHint = document.getElementById('balanceHint');
+document.getElementById('settleForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const icon = document.getElementById('btnIcon');
+    const text = document.getElementById('btnText');
     
-    function updateSuggestedAmount() {
-        const payerId = parseInt(payerSelect.value);
-        const payeeId = parseInt(payeeSelect.value);
-        
-        if (!payerId || !payeeId) {
-            balanceHint.innerHTML = '<small><i class="bi bi-info-circle me-2"></i>Select who you paid to see the suggested amount</small>';
-            balanceHint.className = 'alert alert-info mb-3';
-            return;
-        }
-        
-        if (payerId === payeeId) {
-            balanceHint.innerHTML = '<small><i class="bi bi-exclamation-triangle me-2"></i>Payer and payee cannot be the same</small>';
-            balanceHint.className = 'alert alert-warning mb-3';
-            amountInput.value = '';
-            return;
-        }
-        
-        const payerBalance = balances[payerId] || 0;
-        const payeeBalance = balances[payeeId] || 0;
-        
-        let suggestedAmount = 0;
-        let message = '';
-        
-        if (payerId === currentUserId) {
-            if (payeeBalance > 0) {
-                suggestedAmount = payeeBalance;
-                message = `<strong>${payeeSelect.options[payeeSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
-                balanceHint.className = 'alert alert-success mb-3';
-            } else if (payeeBalance < 0) {
-                suggestedAmount = Math.min(Math.abs(payeeBalance), Math.abs(payerBalance));
-                message = `You owe them ₹${Math.abs(payeeBalance).toFixed(2)} (max you can settle)`;
-                balanceHint.className = 'alert alert-warning mb-3';
-            } else {
-                message = 'All settled up with this person!';
-                balanceHint.className = 'alert alert-secondary mb-3';
-            }
-        } else if (payeeId === currentUserId) {
-            if (payerBalance > 0) {
-                suggestedAmount = payerBalance;
-                message = `<strong>${payerSelect.options[payerSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
-                balanceHint.className = 'alert alert-success mb-3';
-            } else if (payerBalance < 0) {
-                suggestedAmount = Math.abs(payerBalance);
-                message = `You owe them ₹${suggestedAmount.toFixed(2)}`;
-                balanceHint.className = 'alert alert-danger mb-3';
-            } else {
-                message = 'All settled up with this person!';
-                balanceHint.className = 'alert alert-secondary mb-3';
-            }
-        } else {
-            const fromPayerToPayee = payeeBalance - payerBalance;
-            if (fromPayerToPayee > 0) {
-                suggestedAmount = fromPayerToPayee;
-                message = `Suggested: ₹${suggestedAmount.toFixed(2)}`;
-                balanceHint.className = 'alert alert-info mb-3';
-            } else {
-                message = 'No debt between these users';
-                balanceHint.className = 'alert alert-secondary mb-3';
-            }
-        }
-        
-        balanceHint.innerHTML = `<small><i class="bi bi-lightbulb me-2"></i>${message}</small>`;
-        amountInput.value = suggestedAmount > 0 ? suggestedAmount.toFixed(2) : '';
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    icon.classList.add('d-none');
+    text.textContent = 'Recording...';
+});
+
+const balances = {{ balances|tojson }};
+const currentUserId = {{ current_user.id }};
+const payerSelect = document.getElementById('payer_id');
+const payeeSelect = document.getElementById('payee_id');
+const amountInput = document.getElementById('amount');
+const balanceHint = document.getElementById('balanceHint');
+
+function updateSuggestedAmount() {
+    const payerId = parseInt(payerSelect.value);
+    const payeeId = parseInt(payeeSelect.value);
+    
+    if (!payerId || !payeeId) {
+        balanceHint.innerHTML = '<small><i class="bi bi-info-circle me-2"></i>Select who you paid to see the suggested amount</small>';
+        balanceHint.className = 'alert alert-info mb-3';
+        return;
     }
     
-    payerSelect.addEventListener('change', updateSuggestedAmount);
-    payeeSelect.addEventListener('change', updateSuggestedAmount);
+    if (payerId === payeeId) {
+        balanceHint.innerHTML = '<small><i class="bi bi-exclamation-triangle me-2"></i>Payer and payee cannot be the same</small>';
+        balanceHint.className = 'alert alert-warning mb-3';
+        amountInput.value = '';
+        return;
+    }
+    
+    const payerBalance = balances[payerId] || 0;
+    const payeeBalance = balances[payeeId] || 0;
+    
+    let suggestedAmount = 0;
+    let message = '';
+    
+    if (payerId === currentUserId) {
+        if (payeeBalance > 0) {
+            suggestedAmount = payeeBalance;
+            message = `<strong>${payeeSelect.options[payeeSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
+            balanceHint.className = 'alert alert-success mb-3';
+        } else if (payeeBalance < 0) {
+            suggestedAmount = Math.min(Math.abs(payeeBalance), Math.abs(payerBalance));
+            message = `You owe them ₹${Math.abs(payeeBalance).toFixed(2)} (max you can settle)`;
+            balanceHint.className = 'alert alert-warning mb-3';
+        } else {
+            message = 'All settled up with this person!';
+            balanceHint.className = 'alert alert-secondary mb-3';
+        }
+    } else if (payeeId === currentUserId) {
+        if (payerBalance > 0) {
+            suggestedAmount = payerBalance;
+            message = `<strong>${payerSelect.options[payerSelect.selectedIndex].text}</strong> owes you ₹${suggestedAmount.toFixed(2)}`;
+            balanceHint.className = 'alert alert-success mb-3';
+        } else if (payerBalance < 0) {
+            suggestedAmount = Math.abs(payerBalance);
+            message = `You owe them ₹${suggestedAmount.toFixed(2)}`;
+            balanceHint.className = 'alert alert-danger mb-3';
+        } else {
+            message = 'All settled up with this person!';
+            balanceHint.className = 'alert alert-secondary mb-3';
+        }
+    } else {
+        const fromPayerToPayee = payeeBalance - payerBalance;
+        if (fromPayerToPayee > 0) {
+            suggestedAmount = fromPayerToPayee;
+            message = `Suggested: ₹${suggestedAmount.toFixed(2)}`;
+            balanceHint.className = 'alert alert-info mb-3';
+        } else {
+            message = 'No debt between these users';
+            balanceHint.className = 'alert alert-secondary mb-3';
+        }
+    }
+    
+    balanceHint.innerHTML = `<small><i class="bi bi-lightbulb me-2"></i>${message}</small>`;
+    amountInput.value = suggestedAmount > 0 ? suggestedAmount.toFixed(2) : '';
+}
+
+payerSelect.addEventListener('change', updateSuggestedAmount);
+payeeSelect.addEventListener('change', updateSuggestedAmount);
 </script>
 {% endblock %}

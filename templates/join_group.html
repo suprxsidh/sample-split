@@ -10,7 +10,7 @@
                 <h5 class="mb-0"><i class="bi bi-box-arrow-in-right me-2"></i>Join Existing Group</h5>
             </div>
             <div class="card-body">
-                <form method="POST">
+                <form method="POST" id="joinForm">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label for="invite_code" class="form-label">Invite Code</label>
@@ -22,8 +22,10 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-people me-2"></i>Join Group
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+                            <i class="bi bi-people me-2" id="btnIcon"></i>
+                            <span id="btnText">Join Group</span>
                         </button>
                     </div>
                 </form>
@@ -36,4 +38,21 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.getElementById('joinForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const icon = document.getElementById('btnIcon');
+    const text = document.getElementById('btnText');
+    
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    icon.classList.add('d-none');
+    text.textContent = 'Joining...';
+});
+</script>
 {% endblock %}

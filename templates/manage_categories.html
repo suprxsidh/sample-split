@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Categories - {{ group.name }} - SampleSplit{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-tags me-2"></i>Manage Categories</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('add_category', group_id=group.id) }}" class="mb-4">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" name="name" placeholder="Category name" required>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" name="icon">
+                                <option value="tag">tag</option>
+                                <option value="cart">cart</option>
+                                <option value="fork">fork</option>
+                                <option value="cup">cup</option>
+                                <option value="house">house</option>
+                                <option value="car">car</option>
+                                <option value="airplane">airplane</option>
+                                <option value="heart">heart</option>
+                                <option value="gift">gift</option>
+                                <option value="star">star</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="color" class="form-control form-control-color" name="color" value="#6b7280" title="Choose color">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">Add</button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if categories %}
+                    <ul class="list-group">
+                        {% for category in categories %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <span class="badge me-2" style="background-color: {{ category.color }}; width: 24px; height: 24px; border-radius: 4px;"></span>
+                                    <strong>{{ category.name }}</strong>
+                                    <span class="badge bg-secondary ms-2">{{ category.expenses|length }} expenses</span>
+                                </div>
+                                <form method="POST" action="{{ url_for('delete_category', group_id=group.id, category_id=category.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete category? Expenses will be uncategorized but not deleted.')">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <div class="text-center py-4 text-muted">
+                        <i class="bi bi-tags display-4"></i>
+                        <p class="mt-2">No categories yet. Add one above!</p>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ url_for('group', group_id=group.id) }}" class="text-muted">
+                    <i class="bi bi-arrow-left me-2"></i>Back to {{ group.name }}
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

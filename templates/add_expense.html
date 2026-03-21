@@ -33,6 +33,24 @@
                         <input type="text" class="form-control" id="description" name="description" 
                                placeholder="e.g., Dinner at Restaurant, Movie tickets">
                     </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="category_id" class="form-label">Category (optional)</label>
+                            <select class="form-select" id="category_id" name="category_id">
+                                <option value="">Select category...</option>
+                                {% for category in categories %}
+                                    <option value="{{ category.id }}">{{ category.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="tags" class="form-label">Tags (optional)</label>
+                            <input type="text" class="form-control" id="tags" name="tags" 
+                                   placeholder="e.g., weekend, food, work">
+                            <small class="text-muted">Separate with commas</small>
+                        </div>
+                    </div>
                     
                     <div class="mb-3">
                         <label for="payer_id" class="form-label">Paid by</label>
@@ -166,8 +184,10 @@
                     </div>
                     
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary btn-lg">
-                            <i class="bi bi-check-circle me-2"></i>Add Expense
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+                            <i class="bi bi-check-circle me-2" id="btnIcon"></i>
+                            <span id="btnText">Add Expense</span>
                         </button>
                     </div>
                 </form>
@@ -183,7 +203,21 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
 <script>
+document.getElementById('expenseForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const icon = document.getElementById('btnIcon');
+    const text = document.getElementById('btnText');
+    
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    icon.classList.add('d-none');
+    text.textContent = 'Adding...';
+});
+
+const amountInput = document.getElementById('amount');
     const amountInput = document.getElementById('amount');
     const checkboxes = document.querySelectorAll('.member-checkbox');
     const selectAll = document.getElementById('selectAll');

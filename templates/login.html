@@ -12,7 +12,7 @@
                 <p class="text-muted">Sign in to continue to SampleSplit</p>
             </div>
             
-            <form method="POST">
+            <form method="POST" id="loginForm">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                 <div class="mb-3">
                     <label for="username" class="form-label">Username</label>
@@ -24,15 +24,39 @@
                     <input type="password" class="form-control" id="password" name="password" required>
                 </div>
                 
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="bi bi-box-arrow-in-right me-2"></i>Login
+                <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                    <span class="spinner-border spinner-border-sm me-2 d-none" role="status" aria-hidden="true" id="loadingSpinner"></span>
+                    <i class="bi bi-box-arrow-in-right me-2" id="btnIcon"></i>
+                    <span id="btnText">Login</span>
                 </button>
             </form>
             
             <div class="text-center mt-4">
-                <p class="mb-0">Don't have an account? <a href="{{ url_for('register') }}">Sign up</a></p>
+                <p class="mb-2">Don't have an account? <a href="{{ url_for('register') }}">Sign up</a></p>
+                <p class="mb-0">
+                    <a href="{{ url_for('forgot_password') }}" class="text-muted">
+                        <i class="bi bi-question-circle me-1"></i>Forgot your password?
+                    </a>
+                </p>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+document.getElementById('loginForm').addEventListener('submit', function() {
+    const btn = document.getElementById('submitBtn');
+    const spinner = document.getElementById('loadingSpinner');
+    const icon = document.getElementById('btnIcon');
+    const text = document.getElementById('btnText');
+    
+    btn.disabled = true;
+    spinner.classList.remove('d-none');
+    icon.classList.add('d-none');
+    text.textContent = 'Logging in...';
+});
+</script>
 {% endblock %}

@@ -1,0 +1,84 @@
+name: Pull Request
+
+description: Template for creating pull requests
+
+labels: [pull request]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Thank you for contributing to SampleSplit!
+
+        Please fill out this template to help us review your changes.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A brief description of the changes this PR introduces.
+      placeholder: Describe your changes...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of Change
+      options:
+        - Bug fix
+        - Feature addition
+        - Refactoring
+        - Documentation
+        - Tests
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: related
+    attributes:
+      label: Related Issues
+      description: |
+        Link any related issues using keywords (e.g., "Fixes #123", "Relates to #456").
+        Leave blank if this PR doesn't relate to any issues.
+      placeholder: "Fixes #123"
+
+  - type: textarea
+    id: testing
+    attributes:
+      label: Testing
+      description: Describe the testing you performed to verify your changes.
+      placeholder: |
+        - Tested manually by...
+        - Ran pytest tests: passed/failed
+        - Tested edge cases...
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: Code follows the project's style guidelines
+          required: true
+        - label: Self-review completed
+          required: true
+        - label: Comments added for complex code
+        - label: Documentation updated (if applicable)
+        - label: Tests added/updated (if applicable)
+        - label: All tests pass locally
+          required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots (if UI changes)
+      description: Include before/after screenshots for UI changes.
+      placeholder: Attach screenshots here...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Notes
+      description: Any other information the reviewers should know.
+      placeholder: Additional notes...

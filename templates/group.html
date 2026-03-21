@@ -45,11 +45,24 @@
 
 <div class="row mb-3">
     <div class="col">
-        <form method="GET" class="d-flex gap-2">
-            <input type="text" class="form-control" name="q" placeholder="Search expenses..." value="{{ search_query or '' }}">
-            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-search"></i></button>
-            {% if search_query %}
-            <a href="{{ url_for('group', group_id=group.id) }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i></a>
+        <form method="GET" class="d-flex gap-2 flex-wrap">
+            <input type="text" class="form-control" name="q" placeholder="Search expenses..." value="{{ search_query or '' }}" style="max-width: 200px;">
+            <select class="form-select" name="category" style="max-width: 180px;">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if category_filter == cat.id|string %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <select class="form-select" name="sort" style="max-width: 160px;">
+                <option value="date" {% if sort_by == 'date' %}selected{% endif %}>Newest First</option>
+                <option value="date_desc" {% if sort_by == 'date_desc' %}selected{% endif %}>Oldest First</option>
+                <option value="amount_desc" {% if sort_by == 'amount_desc' %}selected{% endif %}>Highest Amount</option>
+                <option value="amount_asc" {% if sort_by == 'amount_asc' %}selected{% endif %}>Lowest Amount</option>
+                <option value="category" {% if sort_by == 'category' %}selected{% endif %}>By Category</option>
+            </select>
+            <button type="submit" class="btn btn-outline-primary"><i class="bi bi-filter"></i> Filter</button>
+            {% if search_query or category_filter %}
+            <a href="{{ url_for('group', group_id=group.id) }}" class="btn btn-outline-secondary"><i class="bi bi-x"></i> Clear</a>
             {% endif %}
         </form>
     </div>
@@ -146,12 +159,9 @@
         {% endif %}
         
         <div class="d-grid mt-4">
-            <form method="POST" action="{{ url_for('leave_group', group_id=group.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Are you sure you want to leave this group?');">
-                    <i class="bi bi-box-arrow-left me-2"></i>Leave Group
-                </button>
-            </form>
+            <button type="button" class="btn btn-outline-danger w-100" onclick="showConfirm('Leave Group', 'Are you sure you want to leave this group? You will lose access to all group history.', '{{ url_for('leave_group', group_id=group.id) }}', 'Leave Group')">
+                <i class="bi bi-box-arrow-left me-2"></i>Leave Group
+            </button>
         </div>
     </div>
 
@@ -161,14 +171,29 @@
                 <h5 class="mb-0"><i class="bi bi-cash-stack me-2"></i>Actions</h5>
             </div>
             <div class="card-body">
-                <div class="btn-group w-100">
+                <div class="btn-group w-100 mb-3">
                     <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">
                         <i class="bi bi-plus-circle me-2"></i>Add Expense
                     </a>
                     <a href="{{ url_for('settle_up', group_id=group.id) }}" class="btn btn-success">
                         <i class="bi bi-arrow-left-right me-2"></i>Settle Up
                     </a>
+                    <a href="{{ url_for('manage_categories', group_id=group.id) }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-tags me-2"></i>Categories
+                    </a>
                 </div>
+                {% if category_summary %}
+                <div class="row g-2">
+                    {% for cat_id, data in category_summary.items() %}
+                    <div class="col-6 col-md-4">
+                        <div class="border rounded p-2 text-center" style="border-left: 4px solid {{ data.category.color }} !important;">
+                            <div class="fw-bold">{{ data.category.name }}</div>
+                            <div class="text-success">₹{{ "%.2f"|format(data.total) }}</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -190,6 +215,12 @@
                                         {% if transaction.data.description %}
                                             <br><small class="text-muted">{{ transaction.data.description }}</small>
                                         {% endif %}
+                                        {% if transaction.data.category %}
+                                            <span class="badge ms-1" style="background-color: {{ transaction.data.category.color }};">{{ transaction.data.category.name }}</span>
+                                        {% endif %}
+                                        {% if transaction.data.tags %}
+                                            <br>{% for tag in transaction.data.tags.split(',') %}<span class="badge bg-secondary-subtle text-secondary me-1">{{ tag.strip() }}</span>{% endfor %}
+                                        {% endif %}
                                         <br><small class="text-muted">
                                             {{ transaction.data.expense_date.strftime('%b %d, %Y') if transaction.data.expense_date else transaction.data.created_at.strftime('%b %d, %Y') }}
                                         </small>
@@ -197,12 +228,9 @@
                                     <div class="d-flex flex-column align-items-end gap-1">
                                         <span class="badge bg-secondary">Expense</span>
                                         {% if transaction.data.payer_id == current_user.id %}
-                                        <form method="POST" action="{{ url_for('delete_expense', group_id=group.id, expense_id=transaction.data.id) }}">
-                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this expense?');">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="showConfirm('Delete Expense', 'Are you sure you want to delete this expense? This action cannot be undone.', '{{ url_for('delete_expense', group_id=group.id, expense_id=transaction.data.id) }}', 'Delete')">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -224,9 +252,15 @@
                     {% endfor %}
                 </ul>
             {% else %}
-                <div class="card-body text-center py-5">
-                    <i class="bi bi-inbox text-muted" style="font-size: 3rem;"></i>
-                    <p class="text-muted mt-2">No activity yet. Add your first expense!</p>
+                <div class="empty-state text-center py-5">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-receipt"></i>
+                    </div>
+                    <h4 class="mt-3">No expenses yet</h4>
+                    <p class="text-muted mb-4">Start tracking your shared expenses by adding your first one.</p>
+                    <a href="{{ url_for('add_expense', group_id=group.id) }}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Add First Expense
+                    </a>
                 </div>
             {% endif %}
         </div>

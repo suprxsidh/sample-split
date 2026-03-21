@@ -87,5 +87,124 @@
         }
     </script>
     {% block scripts %}{% endblock %}
+
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmModalTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmModalBody">
+                Are you sure?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmModalAction">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="sessionModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-clock me-2"></i>Session Expiring</h5>
+            </div>
+            <div class="modal-body">
+                <p>Your session will expire in <span id="sessionCountdown" class="fw-bold">60</span> seconds.</p>
+                <p class="text-muted mb-0">Would you like to continue your session?</p>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary">Logout</a>
+                <button type="button" class="btn btn-primary" id="extendSession">Continue Session</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+    const confirmTitle = document.getElementById('confirmModalTitle');
+    const confirmBody = document.getElementById('confirmModalBody');
+    const confirmAction = document.getElementById('confirmModalAction');
+    
+    window.showConfirm = function(title, message, actionUrl, btnText) {
+        confirmTitle.textContent = title || 'Confirm Action';
+        confirmBody.textContent = message || 'Are you sure?';
+        confirmAction.textContent = btnText || 'Confirm';
+        confirmAction.onclick = function() {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = actionUrl;
+            form.innerHTML = '<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>';
+            document.body.appendChild(form);
+            form.submit();
+        };
+        confirmModal.show();
+    };
+
+    const sessionModal = new bootstrap.Modal(document.getElementById('sessionModal'));
+    const sessionCountdown = document.getElementById('sessionCountdown');
+    const extendBtn = document.getElementById('extendSession');
+    
+    const SESSION_TIMEOUT = 30 * 60 * 1000;
+    const WARNING_BEFORE = 60 * 1000;
+    let sessionTimer;
+    let warningTimer;
+    let countdownInterval;
+    
+    function resetSessionTimer() {
+        clearTimeout(sessionTimer);
+        clearTimeout(warningTimer);
+        clearInterval(countdownInterval);
+        
+        warningTimer = setTimeout(showSessionWarning, SESSION_TIMEOUT - WARNING_BEFORE);
+        sessionTimer = setTimeout(logoutUser, SESSION_TIMEOUT);
+    }
+    
+    function showSessionWarning() {
+        let seconds = 60;
+        sessionCountdown.textContent = seconds;
+        
+        countdownInterval = setInterval(function() {
+            seconds--;
+            sessionCountdown.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(countdownInterval);
+            }
+        }, 1000);
+        
+        sessionModal.show();
+    }
+    
+    function logoutUser() {
+        window.location.href = "{{ url_for('logout') }}";
+    }
+    
+    function extendSession() {
+        sessionModal.hide();
+        fetch('{{ url_for("extend_session") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token() }}'
+            }
+        }).then(function() {
+            resetSessionTimer();
+        });
+    }
+    
+    extendBtn.addEventListener('click', extendSession);
+    
+    ['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(function(event) {
+        document.addEventListener(event, resetSessionTimer, { passive: true });
+    });
+    
+    resetSessionTimer();
+})();
+</script>
 </body>
 </html>

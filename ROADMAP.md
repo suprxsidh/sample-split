@@ -71,39 +71,41 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ### Goal: Community-ready release
 
 **Documentation**
-- [ ] Complete README with installation guide
-- [ ] Deployment guides (Railway, Render, Fly.io, Docker)
-- [ ] SECURITY.md
-- [ ] Demo screenshots/GIFs
+- [x] Complete README with installation guide
+- [x] Deployment guides (Railway, Render, Fly.io, Docker)
+- [x] SECURITY.md
+- [ ] Demo screenshots/GIFs (deferred - friends testing UI)
 
 **Code Quality**
-- [ ] Automated tests (>80% coverage)
-- [ ] Security audit
-- [ ] Code formatter (black)
-- [ ] Linting (flake8)
-- [ ] CI/CD pipeline (GitHub Actions)
+- [x] Automated tests (>80% coverage) - 81% coverage
+- [x] Security audit (basic)
+- [x] Code formatter (black)
+- [x] Linting (flake8)
+- [x] CI/CD pipeline (GitHub Actions)
 
 **Community**
-- [ ] CONTRIBUTING.md
-- [ ] CODE_OF_CONDUCT.md
-- [ ] Issue templates
-- [ ] Pull request template
+- [x] CONTRIBUTING.md
+- [x] CODE_OF_CONDUCT.md
+- [x] Issue templates
+- [x] Pull request template
 
+**Status**: Complete ✅ (Demo screenshots deferred to friends testing)
 **Priority**: High
-**Timeline**: After friends testing
+**Timeline**: Complete - pending friends testing
 
 ---
 
 ## Version 0.5 - Stability & Polish
 ### Goal: Fix bugs, improve UX, make it reliable
 
-- [ ] Loading states for all async operations
-- [ ] Empty states (no groups, no expenses)
-- [ ] Confirmation dialogs for actions
-- [ ] Responsive mobile design improvements
-- [ ] Password reset functionality
-- [ ] Session timeout handling
+- [x] Loading states for all async operations
+- [x] Empty states (no groups, no expenses)
+- [x] Confirmation dialogs for actions
+- [x] Session timeout handling
+- [x] Responsive mobile design improvements
+- [x] Password reset functionality (Admin-mediated)
 
+**Status**: Complete
 **Priority**: High
 
 ---
@@ -111,13 +113,14 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ## Version 0.6 - Categories & Organization
 ### Goal: Help users organize and analyze spending
 
-- [ ] User-defined categories
-- [ ] Category icons/colors
-- [ ] Filter expenses by category
-- [ ] Category spending summary
-- [ ] Tags for expenses
-- [ ] Sort expenses (by date, amount, category)
+- [x] User-defined categories
+- [x] Category icons/colors
+- [x] Filter expenses by category
+- [x] Category spending summary
+- [x] Tags for expenses
+- [x] Sort expenses (by date, amount, category)
 
+**Status**: Complete ✅
 **Priority**: Medium
 
 ---
@@ -161,12 +164,43 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 
 ---
 
+## Version 1.1 - Mobile App
+### Goal: iOS/Android app via PWA + Capacitor
+
+**Phase 1 - PWA**
+- [ ] Add `manifest.json` (app name, icons, theme, standalone display)
+- [ ] Create service worker for offline caching
+- [ ] Add "Add to Home Screen" prompt
+- [ ] PWA meta tags in `base.html`
+
+**Phase 2 - Capacitor + APK**
+- [ ] Wrap PWA with Capacitor for Android APK
+- [ ] GitHub Actions workflow for automated APK builds
+- [ ] GitHub Releases with APK downloads
+- [ ] README with install instructions
+
+**Files to Create/Modify:**
+| File | Action |
+|------|--------|
+| `static/manifest.json` | New |
+| `static/sw.js` | New |
+| `static/icons/` | New |
+| `base.html` | Modify |
+| `.github/workflows/apk.yml` | New |
+| `ROADMAP.md` | Modify |
+
+**Priority**: High (after v0.4-v1.0)
+**Timeline**: TBD
+
+---
+
 ## Future Ideas (Backlog)
 
 ### User Experience
 - [ ] Offline support
 - [ ] Push notifications
 - [ ] Keyboard shortcuts
+- [ ] Email/SMTP password reset (self-service via Resend/SendGrid)
 
 ### Integration
 - [ ] WhatsApp/Telegram bot
@@ -195,11 +229,12 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 | Decision | Current | Options |
 |----------|---------|---------|
 | Frontend | Jinja2 | React, HTMX, Vue |
+| Mobile | Web-only | PWA + Capacitor (planned) |
 | Database | SQLite | PostgreSQL, Supabase |
 | Auth | Session-based | JWT, OAuth |
 | Hosting | Local | Railway, Vercel, Fly.io |
 | Real-time | Polling | WebSocket |
-| Testing | None | pytest |
+| Testing | pytest | None |
 
 ---
 
@@ -219,3 +254,4 @@ MIT License
 ---
 
 *Last updated: 2026-03-21*
+*Mobile App (v1.1) added: 2026-03-21*

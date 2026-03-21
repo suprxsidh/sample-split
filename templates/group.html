@@ -23,6 +23,7 @@
                     {% endif %}
                 </p>
                 <form id="editGroupForm" class="d-none mt-2" method="POST" action="{{ url_for('edit_group', group_id=group.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="input-group input-group-sm" style="max-width: 300px;">
                         <input type="text" class="form-control" name="name" value="{{ group.name }}" required>
                         <button type="submit" class="btn btn-success"><i class="bi bi-check"></i></button>
@@ -145,8 +146,9 @@
         {% endif %}
         
         <div class="d-grid mt-4">
-            <form method="POST" action="{{ url_for('leave_group', group_id=group.id) }}" onsubmit="return confirm('Are you sure you want to leave this group?');">
-                <button type="submit" class="btn btn-outline-danger w-100">
+            <form method="POST" action="{{ url_for('leave_group', group_id=group.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn btn-outline-danger w-100" onclick="return confirm('Are you sure you want to leave this group?');">
                     <i class="bi bi-box-arrow-left me-2"></i>Leave Group
                 </button>
             </form>
@@ -195,8 +197,9 @@
                                     <div class="d-flex flex-column align-items-end gap-1">
                                         <span class="badge bg-secondary">Expense</span>
                                         {% if transaction.data.payer_id == current_user.id %}
-                                        <form method="POST" action="{{ url_for('delete_expense', group_id=group.id, expense_id=transaction.data.id) }}" onsubmit="return confirm('Delete this expense?');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <form method="POST" action="{{ url_for('delete_expense', group_id=group.id, expense_id=transaction.data.id) }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this expense?');">
                                                 <i class="bi bi-trash"></i>
                                             </button>
                                         </form>

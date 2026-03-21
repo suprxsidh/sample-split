@@ -15,6 +15,7 @@
                 </div>
                 
                 <form method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <div class="mb-3">
                         <label for="payer_id" class="form-label">Who paid?</label>
                         <select class="form-select" id="payer_id" name="payer_id" required>

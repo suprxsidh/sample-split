@@ -4,6 +4,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_wtf import FlaskForm
 from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, ValidationError
 from models import db, User, Group, GroupMember, Expense, ExpenseSplit, Settlement
@@ -22,6 +24,13 @@ ADMIN_PASSWORD = 'password123'
 
 db.init_app(app)
 csrf = CSRFProtect(app)
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -99,6 +108,7 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -138,6 +148,7 @@ def register():
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('dashboard'))
@@ -511,6 +522,7 @@ def api_simplify(group_id):
     return jsonify(result)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
+@limiter.limit("3 per minute")
 def admin_login():
     if session.get('admin_logged_in'):
         return redirect(url_for('admin_dashboard'))

@@ -44,23 +44,24 @@ An open-source expense splitting app inspired by Splitwise. Built for groups of 
 ## Version 0.3 - Friends Release (For Sharing Now)
 ### Goal: Get friends using the app ASAP
 
-**Phase 1 - Critical**
-- [ ] GitHub repository created
-- [ ] `.gitignore` (exclude venv, db, __pycache__)
-- [ ] LICENSE file (MIT)
-- [ ] README.md with features + screenshots
-- [ ] Dockerfile
-- [ ] Basic pytest tests (registration, balances, settlements)
-- [ ] Railway deployment (free tier)
+**Phase 1 - Critical** ✅
+- [x] GitHub repository created
+- [x] `.gitignore` (exclude venv, db, __pycache__)
+- [x] LICENSE file (MIT)
+- [x] README.md with features + screenshots
+- [x] Dockerfile
+- [x] Basic pytest tests (registration, balances, settlements)
+- [x] Railway deployment (free tier)
 
-**Phase 2 - Polish (Before Public Release)**
-- [ ] Automated test suite (>50% coverage)
-- [ ] Flask-WTF CSRF protection
-- [ ] Rate limiting on auth routes
-- [ ] Environment variable documentation
-- [ ] CONTRIBUTING.md
-- [ ] CHANGELOG.md
+**Phase 2 - Polish (Before Public Release)** ✅
+- [x] Automated test suite (9 tests passing)
+- [x] Flask-WTF CSRF protection
+- [x] Rate limiting on auth routes
+- [x] CONTRIBUTING.md
+- [x] CHANGELOG.md
 
+**Status**: Phase 1 & 2 Complete ✅
+**Live URL**: https://sample-split-production.up.railway.app
 **Priority**: High
 **Timeline**: This week
 
@@ -217,4 +218,4 @@ MIT License
 
 ---
 
-*Last updated: 2026-03-20*
+*Last updated: 2026-03-21*

@@ -11,24 +11,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - User profile management
 - Email notifications
 - Expense categories and tags
-- Export expenses to CSV
+- Export expenses to PDF
 
 ## [0.3.0] - 2026-03-21
 
 ### Added
-- GitHub repository setup
+- GitHub repository (suprxsidh/sample-split)
 - `.gitignore` file for Python/Flask
 - `LICENSE` file (MIT)
-- `README.md` documentation
+- `README.md` documentation with deployment instructions
 - `Dockerfile` for containerization
-- Basic pytest test suite
+- `CONTRIBUTING.md` for developers
+- Basic pytest test suite (9 tests)
 - Railway deployment configuration
 
 ### Security
 - Flask-WTF CSRF protection on all forms
-- Rate limiting on authentication routes (login/register)
+- Rate limiting on authentication routes (login: 10/min, register: 5/min, admin: 3/min)
 
-## [0.2.0] - 2026-03-???
+### Fixed
+- Database initialization on app startup for production
+
+## [0.2.0] - 2026-03-20
 
 ### Added
 - Split expenses by percentage (must total 100%)
@@ -40,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Leave group functionality
 - Copy invite code to clipboard
 
-## [0.1.0] - 2026-03-???
+## [0.1.0] - 2026-03-19
 
 ### Added
 - User registration and login

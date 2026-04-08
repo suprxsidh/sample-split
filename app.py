@@ -22,6 +22,7 @@ from models import (
 from datetime import datetime, timezone
 import csv
 import io
+from sqlalchemy import inspect, text
 
 instance_path = os.environ.get("INSTANCE_PATH", None)
 app = Flask(__name__, instance_path=instance_path)
@@ -64,6 +65,17 @@ login_manager.login_view = "login"
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
+
+
+def ensure_group_settings_columns():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("groups"):
+        return
+
+    group_columns = {column["name"] for column in inspector.get_columns("groups")}
+    if "allow_on_behalf_expenses" not in group_columns:
+        db.session.execute(text("ALTER TABLE groups ADD COLUMN allow_on_behalf_expenses BOOLEAN DEFAULT 0 NOT NULL"))
+        db.session.commit()
 
 
 def calculate_balances(group_id):
@@ -258,13 +270,19 @@ def dashboard():
 def create_group():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
+        allow_on_behalf_expenses = request.form.get("allow_on_behalf_expenses") == "on"
 
         if not name:
             flash("Group name is required.", "error")
             return render_template("create_group.html")
 
         invite_code = Group.generate_invite_code()
-        group = Group(name=name, invite_code=invite_code, created_by_id=current_user.id)
+        group = Group(
+            name=name,
+            invite_code=invite_code,
+            created_by_id=current_user.id,
+            allow_on_behalf_expenses=allow_on_behalf_expenses,
+        )
         db.session.add(group)
         db.session.flush()
 
@@ -406,6 +424,28 @@ def edit_group(group_id):
     return redirect(url_for("group", group_id=group_id))
 
 
+@app.route("/group/<int:group_id>/settings/on-behalf", methods=["POST"])
+@login_required
+def toggle_on_behalf_expenses(group_id):
+    group_obj = db.get_or_404(Group, group_id)
+
+    membership = GroupMember.query.filter_by(user_id=current_user.id, group_id=group_id).first()
+    if not membership:
+        flash("You are not a member of this group.", "error")
+        return redirect(url_for("dashboard"))
+
+    if group_obj.created_by_id != current_user.id:
+        flash("Only the group owner can change this setting.", "error")
+        return redirect(url_for("group", group_id=group_id))
+
+    group_obj.allow_on_behalf_expenses = request.form.get("allow_on_behalf_expenses") == "on"
+    db.session.commit()
+
+    status = "enabled" if group_obj.allow_on_behalf_expenses else "disabled"
+    flash(f"Add-on-behalf expenses {status}.", "success")
+    return redirect(url_for("group", group_id=group_id))
+
+
 @app.route("/group/<int:group_id>/leave", methods=["POST"])
 @login_required
 def leave_group(group_id):
@@ -527,6 +567,7 @@ def add_expense(group_id):
         return redirect(url_for("dashboard"))
 
     members = [m.user for m in group_obj.members]
+    member_ids = [member.id for member in members]
 
     if request.method == "POST":
         amount = request.form.get("amount", type=float)
@@ -546,10 +587,12 @@ def add_expense(group_id):
             errors.append("Please select who paid.")
         if not selected_members:
             errors.append("Please select at least one person to split with.")
-        if payer_id and int(payer_id) not in [m.id for m in members]:
+        if payer_id and int(payer_id) not in member_ids:
             errors.append("Invalid payer selected.")
+        if payer_id and int(payer_id) != current_user.id and not group_obj.allow_on_behalf_expenses:
+            errors.append("This group does not allow adding expenses on behalf of others.")
         for mid in selected_members:
-            if int(mid) not in [m.id for m in members]:
+            if int(mid) not in member_ids:
                 errors.append("Invalid member selected.")
 
         expense_date = datetime.now(timezone.utc).date()
@@ -1280,9 +1323,71 @@ def admin_export():
 def init_db():
     with app.app_context():
         db.create_all()
+        ensure_group_settings_columns()
+
+
+def seed_meghalaya_trip_group():
+    usernames = ["das", "liru", "dj", "nanditha", "bhavika", "desphande", "riti"]
+    users = []
+    created_users = []
+
+    for username in usernames:
+        user = User.query.filter_by(username=username).first()
+        if not user:
+            email = f"{username}@samplesplit.local"
+            suffix = 1
+            while User.query.filter_by(email=email).first():
+                email = f"{username}{suffix}@samplesplit.local"
+                suffix += 1
+
+            user = User(username=username, email=email)
+            user.set_password("password")
+            db.session.add(user)
+            db.session.flush()
+            created_users.append(username)
+
+        users.append(user)
+
+    trip_group = Group.query.filter(Group.name.ilike("meghalaya trip")).first()
+    created_group = False
+    enabled_on_behalf = False
+    if not trip_group:
+        trip_group = Group(
+            name="meghalaya trip",
+            invite_code=Group.generate_invite_code(),
+            created_by_id=users[0].id,
+            allow_on_behalf_expenses=True,
+        )
+        db.session.add(trip_group)
+        db.session.flush()
+        created_group = True
+    elif not trip_group.allow_on_behalf_expenses:
+        trip_group.allow_on_behalf_expenses = True
+        enabled_on_behalf = True
+
+    added_members = []
+    for user in users:
+        existing_member = GroupMember.query.filter_by(user_id=user.id, group_id=trip_group.id).first()
+        if not existing_member:
+            db.session.add(GroupMember(user_id=user.id, group_id=trip_group.id))
+            added_members.append(user.username)
+
+    if created_users or created_group or enabled_on_behalf or added_members:
+        db.session.commit()
+
+    if created_users:
+        click.echo(f"Added users: {', '.join(created_users)} (password: password)")
+    if created_group:
+        click.echo(f'Created group "{trip_group.name}" (code: {trip_group.invite_code})')
+    if enabled_on_behalf:
+        click.echo(f'Enabled add-on-behalf for "{trip_group.name}"')
+    if added_members:
+        click.echo(f"Added members to \"{trip_group.name}\": {', '.join(added_members)}")
 
 
 def seed_database():
+    seed_meghalaya_trip_group()
+
     alice = User.query.filter_by(username="alice").first()
     if alice:
         click.echo("Seed data already exists. Skipping.")

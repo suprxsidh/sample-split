@@ -141,6 +141,32 @@ class TestGroup:
         response = logged_in_client.post("/group/create", data={"name": "New Group"}, follow_redirects=True)
         assert response.status_code == 200
 
+    def test_create_group_with_on_behalf_enabled(self, logged_in_client, init_db):
+        response = logged_in_client.post(
+            "/group/create",
+            data={"name": "On Behalf Group", "allow_on_behalf_expenses": "on"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            group = Group.query.filter_by(name="On Behalf Group").first()
+            assert group is not None
+            assert group.allow_on_behalf_expenses is True
+
+    def test_create_group_on_behalf_disabled_by_default(self, logged_in_client, init_db):
+        response = logged_in_client.post(
+            "/group/create",
+            data={"name": "Default Toggle Group"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+
+        with app.app_context():
+            group = Group.query.filter_by(name="Default Toggle Group").first()
+            assert group is not None
+            assert group.allow_on_behalf_expenses is False
+
     def test_join_invalid_code(self, logged_in_client, init_db):
         response = logged_in_client.post("/group/join", data={"invite_code": "000000"}, follow_redirects=True)
         assert b"Invalid invite code" in response.data
@@ -232,6 +258,94 @@ class TestExpense:
             f"/group/{setup_data['group_id']}/expense/{expense_id}/delete", follow_redirects=True
         )
         assert b"deleted" in response.data
+
+
+class TestOnBehalfExpenses:
+    def test_add_on_behalf_rejected_when_disabled(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            other_user = User(username="otherpayer_disabled", email="otherpayer_disabled@test.com")
+            other_user.set_password("password")
+            db.session.add(other_user)
+            db.session.commit()
+
+            db.session.add(GroupMember(user_id=other_user.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+            other_user_id = other_user.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "On behalf disabled",
+                "payer_id": str(other_user_id),
+                "members": [str(setup_data["user_id"]), str(other_user_id)],
+                "split_type": "equal",
+            },
+            follow_redirects=True,
+        )
+        assert b"does not allow adding expenses on behalf" in response.data
+
+    def test_add_on_behalf_allowed_when_enabled(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            group = db.session.get(Group, setup_data["group_id"])
+            group.allow_on_behalf_expenses = True
+
+            other_user = User(username="otherpayer_enabled", email="otherpayer_enabled@test.com")
+            other_user.set_password("password")
+            db.session.add(other_user)
+            db.session.flush()
+
+            db.session.add(GroupMember(user_id=other_user.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+            other_user_id = other_user.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "On behalf enabled",
+                "payer_id": str(other_user_id),
+                "members": [str(setup_data["user_id"]), str(other_user_id)],
+                "split_type": "equal",
+            },
+            follow_redirects=True,
+        )
+        assert b"added successfully" in response.data
+
+    def test_owner_can_toggle_on_behalf_setting(self, logged_in_client, setup_data, init_db):
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/settings/on-behalf",
+            data={"allow_on_behalf_expenses": "on"},
+            follow_redirects=True,
+        )
+        assert b"enabled" in response.data
+
+        with app.app_context():
+            group = db.session.get(Group, setup_data["group_id"])
+            assert group.allow_on_behalf_expenses is True
+
+    def test_non_owner_cannot_toggle_on_behalf_setting(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            owner_group = db.session.get(Group, setup_data["group_id"])
+            other_user = User(username="non_owner_toggle", email="non_owner_toggle@test.com")
+            other_user.set_password("password")
+            db.session.add(other_user)
+            db.session.flush()
+
+            db.session.add(GroupMember(user_id=other_user.id, group_id=owner_group.id))
+            db.session.commit()
+
+        logged_in_client.get("/logout")
+        logged_in_client.post("/login", data={"username": "non_owner_toggle", "password": "password"})
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/settings/on-behalf",
+            data={"allow_on_behalf_expenses": "on"},
+            follow_redirects=True,
+        )
+        assert b"Only the group owner can change this setting" in response.data
 
 
 class TestCategory:

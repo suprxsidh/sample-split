@@ -37,6 +37,7 @@ class Group(db.Model):
     invite_code = db.Column(db.String(6), unique=True, nullable=False)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
     created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    allow_on_behalf_expenses = db.Column(db.Boolean, default=False, nullable=False)
 
     created_by = db.relationship("User", foreign_keys=[created_by_id])
     members = db.relationship("GroupMember", back_populates="group", cascade="all, delete-orphan")

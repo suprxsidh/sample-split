@@ -55,13 +55,20 @@
                     <div class="mb-3">
                         <label for="payer_id" class="form-label">Paid by</label>
                         <select class="form-select" id="payer_id" name="payer_id" required>
-                            <option value="">Select who paid...</option>
-                            {% for member in members %}
-                                <option value="{{ member.id }}" {% if member.id == current_user.id %}selected{% endif %}>
-                                    {{ member.username }}{% if member.id == current_user.id %} (Me){% endif %}
-                                </option>
-                            {% endfor %}
+                            {% if group.allow_on_behalf_expenses %}
+                                <option value="">Select who paid...</option>
+                                {% for member in members %}
+                                    <option value="{{ member.id }}" {% if member.id == current_user.id %}selected{% endif %}>
+                                        {{ member.username }}{% if member.id == current_user.id %} (Me){% endif %}
+                                    </option>
+                                {% endfor %}
+                            {% else %}
+                                <option value="{{ current_user.id }}" selected>{{ current_user.username }} (Me)</option>
+                            {% endif %}
                         </select>
+                        {% if not group.allow_on_behalf_expenses %}
+                            <small class="text-muted">Your group currently has add-on-behalf turned off.</small>
+                        {% endif %}
                     </div>
                     
                     <div class="mb-3">
@@ -218,7 +225,6 @@ document.getElementById('expenseForm').addEventListener('submit', function() {
 });
 
 const amountInput = document.getElementById('amount');
-    const amountInput = document.getElementById('amount');
     const checkboxes = document.querySelectorAll('.member-checkbox');
     const selectAll = document.getElementById('selectAll');
     const splitAmount = document.getElementById('splitAmount');

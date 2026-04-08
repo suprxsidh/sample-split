@@ -660,6 +660,35 @@ def add_expense(group_id):
                             "add_expense.html", group=group_obj, members=members, categories=group_obj.categories
                         )
 
+            elif split_type == "ratio":
+                ratios = []
+                for member_id in selected_members:
+                    ratio_key = f"ratio_{member_id}"
+                    ratio_value = request.form.get(ratio_key, type=float, default=0)
+                    if ratio_value <= 0:
+                        flash("All selected members must have a ratio greater than 0.", "error")
+                        return render_template(
+                            "add_expense.html", group=group_obj, members=members, categories=group_obj.categories
+                        )
+                    ratios.append((int(member_id), ratio_value))
+
+                total_ratio = sum(ratio_value for _, ratio_value in ratios)
+                if total_ratio <= 0:
+                    flash("Please enter valid ratios.", "error")
+                    return render_template(
+                        "add_expense.html", group=group_obj, members=members, categories=group_obj.categories
+                    )
+
+                remaining = amount
+                for index, (user_id, ratio_value) in enumerate(ratios):
+                    if index == len(ratios) - 1:
+                        split_amount = round(remaining, 2)
+                    else:
+                        split_amount = round((ratio_value / total_ratio) * amount, 2)
+                        remaining -= split_amount
+
+                    splits.append((user_id, split_amount))
+
             expense = Expense(
                 group_id=group_id,
                 payer_id=payer_id,

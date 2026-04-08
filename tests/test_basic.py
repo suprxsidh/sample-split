@@ -242,6 +242,64 @@ class TestExpense:
         )
         assert b"added successfully" in response.data
 
+    def test_add_expense_ratio_split(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="ratio_bob", email="ratio_bob@test.com")
+            bob.set_password("password")
+            charlie = User(username="ratio_charlie", email="ratio_charlie@test.com")
+            charlie.set_password("password")
+            db.session.add_all([bob, charlie])
+            db.session.commit()
+
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.add(GroupMember(user_id=charlie.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+
+            bob_id = bob.id
+            charlie_id = charlie.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "1000",
+                "description": "Cab split by ratio",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"]), str(bob_id), str(charlie_id)],
+                "split_type": "ratio",
+                f"ratio_{setup_data['user_id']}": "2",
+                f"ratio_{bob_id}": "1",
+                f"ratio_{charlie_id}": "1",
+            },
+            follow_redirects=True,
+        )
+        assert b"added successfully" in response.data
+
+    def test_add_expense_ratio_split_invalid_ratio(self, logged_in_client, setup_data, init_db):
+        with app.app_context():
+            bob = User(username="ratio_invalid_bob", email="ratio_invalid_bob@test.com")
+            bob.set_password("password")
+            db.session.add(bob)
+            db.session.commit()
+
+            db.session.add(GroupMember(user_id=bob.id, group_id=setup_data["group_id"]))
+            db.session.commit()
+            bob_id = bob.id
+
+        response = logged_in_client.post(
+            f"/group/{setup_data['group_id']}/expense",
+            data={
+                "amount": "100",
+                "description": "Invalid ratio",
+                "payer_id": str(setup_data["user_id"]),
+                "members": [str(setup_data["user_id"]), str(bob_id)],
+                "split_type": "ratio",
+                f"ratio_{setup_data['user_id']}": "1",
+                f"ratio_{bob_id}": "0",
+            },
+            follow_redirects=True,
+        )
+        assert b"ratio greater than 0" in response.data
+
     def test_delete_expense(self, logged_in_client, setup_data, init_db):
         with app.app_context():
             expense = Expense(

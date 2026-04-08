@@ -107,7 +107,12 @@
                             <label class="btn btn-outline-primary" for="splitPercent">
                                 <i class="bi bi-percent"></i> Percentage
                             </label>
-                            
+
+                            <input type="radio" class="btn-check" name="split_type" id="splitRatio" value="ratio">
+                            <label class="btn btn-outline-primary" for="splitRatio">
+                                <i class="bi bi-diagram-3"></i> Ratio
+                            </label>
+                             
                             <input type="radio" class="btn-check" name="split_type" id="splitExact" value="exact">
                             <label class="btn btn-outline-primary" for="splitExact">
                                 <i class="bi bi-currency-dollar"></i> Exact
@@ -156,7 +161,39 @@
                                 <span class="badge bg-danger d-none" id="percentInvalid">✗ Must be 100%</span>
                             </div>
                         </div>
-                        
+
+                        <div id="ratioSplit" class="split-panel d-none">
+                            <div class="alert alert-info mb-2">
+                                <small><i class="bi bi-info-circle me-2"></i>Enter ratios like 2:1:1. We will calculate each amount automatically.</small>
+                            </div>
+                            <div id="ratioInputs" class="border rounded p-3">
+                                {% for member in members %}
+                                    <div class="row mb-2 align-items-center" data-member="{{ member.id }}">
+                                        <div class="col-6">
+                                            {{ member.username }}{% if member.id == current_user.id %} (Me){% endif %}
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="input-group input-group-sm">
+                                                <input type="number" class="form-control ratio-input"
+                                                       name="ratio_{{ member.id }}"
+                                                       placeholder="1" min="0" step="0.01"
+                                                       data-member="{{ member.id }}">
+                                                <span class="input-group-text">parts</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-2 text-end">
+                                            <span class="amount-display" id="ratio_amount_{{ member.id }}">₹0.00</span>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2 text-center">
+                                <span class="badge" id="ratioTotal">Total ratio: 0</span>
+                                <span class="badge bg-success d-none" id="ratioValid">✓ Valid</span>
+                                <span class="badge bg-danger d-none" id="ratioInvalid">✗ Enter ratios > 0</span>
+                            </div>
+                        </div>
+                         
                         <div id="exactSplit" class="split-panel d-none">
                             <div class="alert alert-info mb-2">
                                 <small><i class="bi bi-info-circle me-2"></i>Enter exact amounts for each person. The last person's amount will be auto-calculated.</small>
@@ -217,7 +254,7 @@ document.getElementById('expenseForm').addEventListener('submit', function() {
     const spinner = document.getElementById('loadingSpinner');
     const icon = document.getElementById('btnIcon');
     const text = document.getElementById('btnText');
-    
+
     btn.disabled = true;
     spinner.classList.remove('d-none');
     icon.classList.add('d-none');
@@ -225,147 +262,215 @@ document.getElementById('expenseForm').addEventListener('submit', function() {
 });
 
 const amountInput = document.getElementById('amount');
-    const checkboxes = document.querySelectorAll('.member-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    const splitAmount = document.getElementById('splitAmount');
-    const splitTypeRadios = document.querySelectorAll('input[name="split_type"]');
-    
-    const equalPanel = document.getElementById('equalSplit');
-    const percentPanel = document.getElementById('percentSplit');
-    const exactPanel = document.getElementById('exactSplit');
-    
-    const percentInputs = document.querySelectorAll('.percentage-input');
-    const percentTotal = document.getElementById('percentTotal');
-    const percentValid = document.getElementById('percentValid');
-    const percentInvalid = document.getElementById('percentInvalid');
-    
-    const exactInputs = document.querySelectorAll('.exact-input');
-    const exactTotal = document.getElementById('exactTotal');
-    const exactValid = document.getElementById('exactValid');
-    const exactInvalid = document.getElementById('exactInvalid');
-    const exactDiff = document.getElementById('exactDiff');
-    
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('expense_date').max = today;
-    
-    function getSelectedMembers() {
-        return Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value));
-    }
-    
-    function updateSplitInfo() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const selected = getSelectedMembers().length;
-        const perPerson = selected > 0 ? amount / selected : 0;
-        splitAmount.textContent = '₹' + perPerson.toFixed(2);
-        
-        updatePercentDisplays();
-        updateExactDisplays();
-    }
-    
-    function updatePercentDisplays() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const selected = getSelectedMembers();
-        
-        percentTotal.textContent = 'Total: 0%';
-        percentValid.classList.add('d-none');
-        percentInvalid.classList.add('d-none');
-        
-        if (selected.length === 0) return;
-        
-        let totalPct = 0;
+const checkboxes = document.querySelectorAll('.member-checkbox');
+const selectAll = document.getElementById('selectAll');
+const splitAmount = document.getElementById('splitAmount');
+const splitTypeRadios = document.querySelectorAll('input[name="split_type"]');
+
+const equalPanel = document.getElementById('equalSplit');
+const percentPanel = document.getElementById('percentSplit');
+const ratioPanel = document.getElementById('ratioSplit');
+const exactPanel = document.getElementById('exactSplit');
+
+const percentInputs = document.querySelectorAll('.percentage-input');
+const percentTotal = document.getElementById('percentTotal');
+const percentValid = document.getElementById('percentValid');
+const percentInvalid = document.getElementById('percentInvalid');
+
+const ratioInputs = document.querySelectorAll('.ratio-input');
+const ratioTotal = document.getElementById('ratioTotal');
+const ratioValid = document.getElementById('ratioValid');
+const ratioInvalid = document.getElementById('ratioInvalid');
+
+const exactInputs = document.querySelectorAll('.exact-input');
+const exactTotal = document.getElementById('exactTotal');
+const exactValid = document.getElementById('exactValid');
+const exactInvalid = document.getElementById('exactInvalid');
+const exactDiff = document.getElementById('exactDiff');
+
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('expense_date').max = today;
+
+function getSelectedMembers() {
+    return Array.from(checkboxes).filter(cb => cb.checked).map(cb => parseInt(cb.value, 10));
+}
+
+function updateSplitInfo() {
+    const amount = parseFloat(amountInput.value) || 0;
+    const selectedCount = getSelectedMembers().length;
+    const perPerson = selectedCount > 0 ? amount / selectedCount : 0;
+    splitAmount.textContent = '₹' + perPerson.toFixed(2);
+
+    updatePercentDisplays();
+    updateRatioDisplays();
+    updateExactDisplays();
+}
+
+function updatePercentDisplays() {
+    const amount = parseFloat(amountInput.value) || 0;
+    const selected = getSelectedMembers();
+
+    percentTotal.textContent = 'Total: 0%';
+    percentValid.classList.add('d-none');
+    percentInvalid.classList.add('d-none');
+
+    if (selected.length === 0) {
         percentInputs.forEach(input => {
-            const memberId = parseInt(input.dataset.member);
-            if (selected.includes(memberId)) {
-                const pct = parseFloat(input.value) || 0;
-                totalPct += pct;
-                const amt = (pct / 100) * amount;
-                document.getElementById('amount_' + memberId).textContent = '₹' + amt.toFixed(2);
-            } else {
-                document.getElementById('amount_' + memberId).textContent = '₹0.00';
-            }
+            document.getElementById('amount_' + input.dataset.member).textContent = '₹0.00';
         });
-        
-        percentTotal.textContent = 'Total: ' + totalPct.toFixed(1) + '%';
-        
-        if (Math.abs(totalPct - 100) < 0.1) {
-            percentValid.classList.remove('d-none');
-        } else if (totalPct > 0) {
-            percentInvalid.classList.remove('d-none');
-        }
+        return;
     }
-    
-    function updateExactDisplays() {
-        const amount = parseFloat(amountInput.value) || 0;
-        const selected = getSelectedMembers();
-        
-        exactTotal.textContent = 'Total: ₹0.00';
-        exactValid.classList.add('d-none');
-        exactInvalid.classList.add('d-none');
-        document.querySelectorAll('.auto-badge').forEach(b => b.classList.add('d-none'));
-        
-        if (selected.length === 0) return;
-        
-        let total = 0;
-        const inputs = {};
-        
-        selected.forEach(memberId => {
-            const input = document.querySelector(`.exact-input[data-member="${memberId}"]`);
-            const val = parseFloat(input.value) || 0;
-            inputs[memberId] = val;
-            total += val;
-        });
-        
-        const remaining = amount - total;
-        
-        if (Math.abs(remaining) < 0.01) {
-            exactTotal.textContent = 'Total: ₹' + total.toFixed(2);
-            exactValid.classList.remove('d-none');
-            selected.forEach(memberId => {
-                const input = document.querySelector(`.exact-input[data-member="${memberId}"]`);
-                input.classList.remove('border-danger');
-            });
-        } else {
-            exactTotal.textContent = 'Total: ₹' + total.toFixed(2) + ' / ₹' + amount.toFixed(2);
-            exactDiff.textContent = 'Remaining: ₹' + Math.abs(remaining).toFixed(2);
-            exactInvalid.classList.remove('d-none');
-        }
-    }
-    
-    checkboxes.forEach(cb => cb.addEventListener('change', () => {
-        const allChecked = Array.from(checkboxes).every(c => c.checked);
-        selectAll.checked = allChecked;
-        updateSplitInfo();
-    }));
-    
-    selectAll.addEventListener('change', () => {
-        checkboxes.forEach(cb => cb.checked = selectAll.checked);
-        updateSplitInfo();
-    });
-    
-    amountInput.addEventListener('input', updateSplitInfo);
-    
-    splitTypeRadios.forEach(radio => {
-        radio.addEventListener('change', () => {
-            equalPanel.classList.add('d-none');
-            percentPanel.classList.add('d-none');
-            exactPanel.classList.add('d-none');
-            
-            if (radio.value === 'equal') equalPanel.classList.remove('d-none');
-            else if (radio.value === 'percentage') percentPanel.classList.remove('d-none');
-            else if (radio.value === 'exact') exactPanel.classList.remove('d-none');
-            
-            updateSplitInfo();
-        });
-    });
-    
+
+    let totalPct = 0;
     percentInputs.forEach(input => {
-        input.addEventListener('input', updatePercentDisplays);
+        const memberId = parseInt(input.dataset.member, 10);
+        if (selected.includes(memberId)) {
+            const pct = parseFloat(input.value) || 0;
+            totalPct += pct;
+            const memberAmount = (pct / 100) * amount;
+            document.getElementById('amount_' + memberId).textContent = '₹' + memberAmount.toFixed(2);
+        } else {
+            document.getElementById('amount_' + memberId).textContent = '₹0.00';
+        }
     });
-    
-    exactInputs.forEach(input => {
-        input.addEventListener('input', updateExactDisplays);
+
+    percentTotal.textContent = 'Total: ' + totalPct.toFixed(1) + '%';
+
+    if (Math.abs(totalPct - 100) < 0.1) {
+        percentValid.classList.remove('d-none');
+    } else if (totalPct > 0) {
+        percentInvalid.classList.remove('d-none');
+    }
+}
+
+function updateRatioDisplays() {
+    const amount = parseFloat(amountInput.value) || 0;
+    const selected = getSelectedMembers();
+
+    ratioTotal.textContent = 'Total ratio: 0';
+    ratioValid.classList.add('d-none');
+    ratioInvalid.classList.add('d-none');
+
+    if (selected.length === 0) {
+        ratioInputs.forEach(input => {
+            document.getElementById('ratio_amount_' + input.dataset.member).textContent = '₹0.00';
+        });
+        return;
+    }
+
+    let totalRatio = 0;
+    let allPositive = true;
+    ratioInputs.forEach(input => {
+        const memberId = parseInt(input.dataset.member, 10);
+        if (selected.includes(memberId)) {
+            const ratioValue = parseFloat(input.value) || 0;
+            totalRatio += ratioValue;
+            if (ratioValue <= 0) {
+                allPositive = false;
+            }
+        }
     });
-    
+
+    ratioInputs.forEach(input => {
+        const memberId = parseInt(input.dataset.member, 10);
+        if (selected.includes(memberId) && totalRatio > 0) {
+            const ratioValue = parseFloat(input.value) || 0;
+            const memberAmount = (ratioValue / totalRatio) * amount;
+            document.getElementById('ratio_amount_' + memberId).textContent = '₹' + memberAmount.toFixed(2);
+        } else {
+            document.getElementById('ratio_amount_' + memberId).textContent = '₹0.00';
+        }
+    });
+
+    ratioTotal.textContent = 'Total ratio: ' + totalRatio.toFixed(2);
+
+    if (allPositive && totalRatio > 0) {
+        ratioValid.classList.remove('d-none');
+    } else {
+        ratioInvalid.classList.remove('d-none');
+    }
+}
+
+function updateExactDisplays() {
+    const amount = parseFloat(amountInput.value) || 0;
+    const selected = getSelectedMembers();
+
+    exactTotal.textContent = 'Total: ₹0.00';
+    exactValid.classList.add('d-none');
+    exactInvalid.classList.add('d-none');
+    document.querySelectorAll('.auto-badge').forEach(badge => badge.classList.add('d-none'));
+
+    if (selected.length === 0) {
+        return;
+    }
+
+    let total = 0;
+    selected.forEach(memberId => {
+        const input = document.querySelector(`.exact-input[data-member="${memberId}"]`);
+        const value = parseFloat(input.value) || 0;
+        total += value;
+    });
+
+    const remaining = amount - total;
+
+    if (Math.abs(remaining) < 0.01) {
+        exactTotal.textContent = 'Total: ₹' + total.toFixed(2);
+        exactValid.classList.remove('d-none');
+    } else {
+        exactTotal.textContent = 'Total: ₹' + total.toFixed(2) + ' / ₹' + amount.toFixed(2);
+        exactDiff.textContent = 'Remaining: ₹' + Math.abs(remaining).toFixed(2);
+        exactInvalid.classList.remove('d-none');
+    }
+}
+
+checkboxes.forEach(checkbox => checkbox.addEventListener('change', () => {
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    selectAll.checked = allChecked;
     updateSplitInfo();
+}));
+
+selectAll.addEventListener('change', () => {
+    checkboxes.forEach(cb => {
+        cb.checked = selectAll.checked;
+    });
+    updateSplitInfo();
+});
+
+amountInput.addEventListener('input', updateSplitInfo);
+
+splitTypeRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+        equalPanel.classList.add('d-none');
+        percentPanel.classList.add('d-none');
+        ratioPanel.classList.add('d-none');
+        exactPanel.classList.add('d-none');
+
+        if (radio.value === 'equal') {
+            equalPanel.classList.remove('d-none');
+        } else if (radio.value === 'percentage') {
+            percentPanel.classList.remove('d-none');
+        } else if (radio.value === 'ratio') {
+            ratioPanel.classList.remove('d-none');
+        } else if (radio.value === 'exact') {
+            exactPanel.classList.remove('d-none');
+        }
+
+        updateSplitInfo();
+    });
+});
+
+percentInputs.forEach(input => {
+    input.addEventListener('input', updatePercentDisplays);
+});
+
+ratioInputs.forEach(input => {
+    input.addEventListener('input', updateRatioDisplays);
+});
+
+exactInputs.forEach(input => {
+    input.addEventListener('input', updateExactDisplays);
+});
+
+updateSplitInfo();
 </script>
 {% endblock %}
